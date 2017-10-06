@@ -91,8 +91,11 @@ typedef struct thermostat_output_t {
     bool        heat_stage_2;   // true if enable heating stage 2
     bool        cool_stage_1;   // true if enable cooling stage 1
     bool        cool_stage_2;   // true if enable cooling stage 2
+    bool        blinking;       // blink to indicate action?
     uint8_t     timer_led_num;  // number of timer LEDs to display
     uint32_t    temp_display;   // which temperature to display?
+    uint32_t    hsp_display;   // display hsp
+    uint32_t    csp_display;   // display csp
 } thermostat_output_t;
 
 void init_thermostat(thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);

@@ -79,6 +79,41 @@ void transition(thermostat_state_t* state, thermostat_action_t* action, uint32_t
 }
 
 void state_to_output(thermostat_state_t *state, thermostat_output_t *output) {
+    output->temp_display = state->temp_in;
+
+    // handle if thermostat is off
+    if (!state->on) {
+        output->heat_stage_1 = false;
+        output->heat_stage_2 = false;
+        output->cool_stage_1 = false;
+        output->cool_stage_2 = false;
+        return;
+    }
+
+    // now assuming thermostat is on
+    // display the setpoint info
+    output->hsp_display = state->temp_hsp;
+    output->csp_display = state->temp_csp;
+
+    // handle heat/cool
+    if (state->is_heating) {
+        output->heat_stage_1 = true;
+        output->cool_stage_1 = false;
+        output->blinking = true;
+    } else if (state->is_cooling) {
+        output->heat_stage_1 = false;
+        output->cool_stage_1 = true;
+        output->blinking = true;
+    } else {
+        output->heat_stage_1 = false;
+        output->cool_stage_1 = false;
+        output->blinking = false;
+    }
+
+    // handle timer display
+    if (state->hold_timer) {
+        output->timer_led_num = (state->hold_timer / TIMER_INTERVAL); // int!
+    }
 }
 
 uint32_t max(uint32_t a, uint32_t b) {
