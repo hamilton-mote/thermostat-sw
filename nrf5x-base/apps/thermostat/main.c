@@ -35,7 +35,7 @@
 // configure TWI
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
 hdc1000_cfg_t sensor_cfg = {
-    .address = TEMP_HUMID_SENSOR
+    .address = TEMP_HUMID_SENSOR >> 1
 };
 tlc59116_cfg_t tempdriver_cfg = {
     .address = LED_DRIVER_TEMP,
@@ -63,20 +63,21 @@ static void timer_handler (void* p_context) {
 
     int display_temp, led_register_temp;
     int t = (int)temp;
-    if (t == 0) 
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM15, 0xff);    
-    else if (t < 0) 
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM14, 0xff);    
-    else if (t < 10)
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);    
-    else if (t < 100)
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM2, 0xff);    
-    else if (t < 1000)
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);    
-    else
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM4, 0xff);    
+    int traw = (int)hum;
+    if (traw == 0)
+        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM7, 0xff);
+    //else if (t == -1)
+    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM10, 0xff);
+    //else if (t < -1)
+    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);
+    //else if (t < -2)
+    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM2, 0xff);
+    //else if (t < -1000)
+    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);
+    //else
+    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM4, 0xff);
     nearest_temperature(&t, &display_temp, &led_register_temp);
-    tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);    
+    //tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);
 }
 
 // Setup timer
@@ -137,9 +138,16 @@ int main(void) {
     tlc59116_init(&tempdriver_cfg, &twi_instance);
     tlc59116_init(&spdriver_cfg, &twi_instance);
     tlc59116_init(&leddriver3_cfg, &twi_instance);
-    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM0, 0xff);    
 
-    //hdc1000_init(&sensor_cfg, &twi_instance);
+    int ret = hdc1000_init(&sensor_cfg, &twi_instance);
+    if (ret == 1) {
+        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);
+    } else if (ret == 2) {
+        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM2, 0xff);
+    } else {
+        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);
+    }
+
 
     // Enter main loop.
     while (1) {

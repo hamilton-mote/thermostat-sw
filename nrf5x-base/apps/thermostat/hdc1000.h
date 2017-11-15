@@ -13,7 +13,7 @@ typedef struct hdc1000_cfg_t {
     uint8_t address;
 } hdc1000_cfg_t;
 
-void hdc1000_init(hdc1000_cfg_t* cfg, nrf_drv_twi_t* p_instance);
+int hdc1000_init(hdc1000_cfg_t* cfg, nrf_drv_twi_t* p_instance);
 void hdc1000_trigger_conversion(hdc1000_cfg_t* cfg);
 void hdc1000_get_results(hdc1000_cfg_t* cfg, int16_t *temp, int16_t *hum);
 void hdc1000_read(hdc1000_cfg_t* cfg, int16_t *temp, int16_t *hum);
