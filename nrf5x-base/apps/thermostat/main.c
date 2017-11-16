@@ -35,7 +35,7 @@
 // configure TWI
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
 hdc1000_cfg_t sensor_cfg = {
-    .address = TEMP_HUMID_SENSOR >> 1
+    .address = TEMP_HUMID_SENSOR
 };
 tlc59116_cfg_t tempdriver_cfg = {
     .address = LED_DRIVER_TEMP,
@@ -60,24 +60,13 @@ static void timer_handler (void* p_context) {
     int16_t hum;
     int16_t temp;
     hdc1000_read(&sensor_cfg, &temp, &hum);
+    temp = (1.8*temp+3200) / 100;
 
     int display_temp, led_register_temp;
     int t = (int)temp;
-    int traw = (int)hum;
-    if (traw == 0)
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM7, 0xff);
-    //else if (t == -1)
-    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM10, 0xff);
-    //else if (t < -1)
-    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);
-    //else if (t < -2)
-    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM2, 0xff);
-    //else if (t < -1000)
-    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);
-    //else
-    //    tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM4, 0xff);
     nearest_temperature(&t, &display_temp, &led_register_temp);
-    //tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);
+    tlc59116_off(&tempdriver_cfg);
+    tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);
 }
 
 // Setup timer
