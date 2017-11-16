@@ -50,6 +50,14 @@ tlc59116_cfg_t leddriver3_cfg = {
     .initial_value = 0x0,
 };
 
+/*
+ * Thermostat state!
+ */
+thermostat_state_t THERMOSTAT_STATE;
+thermostat_action_t THERMOSTAT_ACTION;
+thermostat_output_t THERMOSTAT_OUTPUT;
+
+
 int a = 0xaa;
 
 // Timer data structure
@@ -62,10 +70,16 @@ static void timer_handler (void* p_context) {
     hdc1000_read(&sensor_cfg, &temp, &hum);
     temp = (1.8*temp+3200) / 100;
 
-    int display_temp, led_register_temp;
-    int t = (int)temp;
-    nearest_temperature(&t, &display_temp, &led_register_temp);
-    tlc59116_off(&tempdriver_cfg);
+    uint16_t display_temp;
+    int led_register_temp;
+
+    // turn off old LED
+    nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
+    tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0x0);
+
+    // turn on new LED
+    THERMOSTAT_OUTPUT.temp_display = (int)temp;
+    nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
     tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);
 }
 
@@ -108,6 +122,45 @@ static void i2c_init(void) {
     nrf_drv_twi_enable(&twi_instance);
 }
 
+void draw_setpoints() {
+    int led_register_temp;
+    tlc59116_set_all(&spdriver_cfg, 0x0);
+    nearest_temperature(&(THERMOSTAT_STATE.temp_csp), &(THERMOSTAT_OUTPUT.csp_display), &led_register_temp);
+    tlc59116_set_led(&spdriver_cfg, led_register_temp, 0xff);
+
+    nearest_temperature(&(THERMOSTAT_STATE.temp_hsp), &(THERMOSTAT_OUTPUT.hsp_display), &led_register_temp);
+    tlc59116_set_led(&spdriver_cfg, led_register_temp, 0xff);
+}
+
+void draw_timer() {
+    int led0, led1, led2, led3;
+    int num;
+    timer_led_settings(&THERMOSTAT_STATE, &led0, &led1, &led2, &led3, &num);
+    tlc59116_set_led(&leddriver3_cfg, led0, num >= 1 ? 0x0f : 0x0);
+    tlc59116_set_led(&leddriver3_cfg, led1, num >= 2 ? 0x0f : 0x0);
+    tlc59116_set_led(&leddriver3_cfg, led2, num >= 3 ? 0x0f : 0x0);
+    tlc59116_set_led(&leddriver3_cfg, led3, num == 4 ? 0x0f : 0x0);
+}
+
+void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+
+    // turn off old LED
+    if (pin == SP_DEC) {
+        THERMOSTAT_STATE.temp_csp -= 2;
+        THERMOSTAT_STATE.temp_hsp -= 2;
+        draw_setpoints();
+    } else if (pin == SP_INC) {
+        THERMOSTAT_STATE.temp_csp += 2;
+        THERMOSTAT_STATE.temp_hsp += 2;
+        draw_setpoints();
+    } else if (pin == TIMER_BUTTON) {
+        update_timer_press(&THERMOSTAT_STATE);
+        draw_timer();
+    }
+
+}
+
+
 int main(void) {
 
     // Need to set the clock to something
@@ -136,6 +189,46 @@ int main(void) {
     } else {
         tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);
     }
+
+    /*
+     * Initialize thermsotat state
+     */
+    init_thermostat(&THERMOSTAT_STATE, &THERMOSTAT_ACTION, &THERMOSTAT_OUTPUT);
+    draw_setpoints();
+
+    // Initialize buttons
+    ret_code_t err_code;
+    err_code = nrf_drv_gpiote_init();
+    if (err_code > 0) {
+        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        return 1;
+    }
+    nrf_drv_gpiote_in_config_t dec_in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    dec_in_config.pull = NRF_GPIO_PIN_PULLUP;
+    err_code = nrf_drv_gpiote_in_init(SP_DEC, &dec_in_config, button_handler);
+    if (err_code > 0) {
+        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        return 1;
+    }
+    nrf_drv_gpiote_in_event_enable(SP_DEC, true);
+
+    nrf_drv_gpiote_in_config_t inc_in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    inc_in_config.pull = NRF_GPIO_PIN_PULLUP;
+    err_code = nrf_drv_gpiote_in_init(SP_INC, &inc_in_config, button_handler);
+    if (err_code > 0) {
+        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        return 1;
+    }
+    nrf_drv_gpiote_in_event_enable(SP_INC, true);
+
+    nrf_drv_gpiote_in_config_t timer_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    timer_config.pull = NRF_GPIO_PIN_PULLUP;
+    err_code = nrf_drv_gpiote_in_init(TIMER_BUTTON, &timer_config, button_handler);
+    if (err_code == NRF_ERROR_NO_MEM) {
+        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        return 1;
+    }
+    nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
 
 
     // Enter main loop.

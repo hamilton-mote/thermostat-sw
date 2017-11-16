@@ -62,6 +62,6 @@ void hdc1000_get_results(hdc1000_cfg_t* cfg, int16_t *temp, int16_t *hum) {
 
 void hdc1000_read(hdc1000_cfg_t* cfg, int16_t *temp, int16_t *hum) {
     hdc1000_trigger_conversion(cfg);
-    nrf_delay_us(20000);
+    nrf_delay_us(13000);
     hdc1000_get_results(cfg, temp, hum);
 }

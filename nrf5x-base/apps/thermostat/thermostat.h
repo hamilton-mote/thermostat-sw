@@ -8,6 +8,17 @@
 // hdc1000
 #define TEMP_HUMID_SENSOR 0x40
 
+// GPIO pins
+#define D18    18
+#define D19    19
+#define D24    24
+#define D25    25
+#define SP_DEC    18
+#define SP_INC    19
+#define POWER    24
+#define TIMER_BUTTON    25
+#define PIR    6
+
 // LED actuation groups
 // display setpoint
 #define LED_DRIVER_SP 0x61
@@ -67,10 +78,10 @@
 #define TIMER_INTERVAL 900
 
 typedef struct thermostat_state_t {
-    uint32_t    temp_in;    // measured inside temperature
-    uint32_t    temp_csp;   // cooling setpoint
-    uint32_t    temp_hsp;   // heating setpoint
-    uint32_t    hold_timer; // current timer value
+    uint16_t    temp_in;    // measured inside temperature
+    uint16_t    temp_csp;   // cooling setpoint
+    uint16_t    temp_hsp;   // heating setpoint
+    uint16_t    hold_timer; // current timer value
     uint8_t     hysteresis; // hysteresis value
     bool        is_heating; // true if heating
     bool        is_cooling; // true if cooling
@@ -78,11 +89,11 @@ typedef struct thermostat_state_t {
 } thermostat_state_t;
 
 typedef struct thermostat_action_t {
-    uint32_t    *csp_direct;     // direct setting of cooling setpoint
-    uint32_t    *hsp_direct;     // direct setting of heating setpoint
+    uint16_t    *csp_direct;     // direct setting of cooling setpoint
+    uint16_t    *hsp_direct;     // direct setting of heating setpoint
     uint32_t    *timer_direct;   // direct timer setting (in seconds)
     uint32_t    *hysteresis;     // changing hysteresis value
-    uint32_t    temp;           // temperature sensor reading
+    uint16_t    temp;           // temperature sensor reading
     bool        hold_timer;     // hold timer button press
     bool        onoff;          // power button press
     bool        inc_sp;         // increment setpoint button press
@@ -96,9 +107,9 @@ typedef struct thermostat_output_t {
     bool        cool_stage_2;   // true if enable cooling stage 2
     bool        blinking;       // blink to indicate action?
     uint8_t     timer_led_num;  // number of timer LEDs to display
-    uint32_t    temp_display;   // which temperature to display?
-    uint32_t    hsp_display;   // display hsp
-    uint32_t    csp_display;   // display csp
+    uint16_t    temp_display;   // which temperature to display?
+    uint16_t    hsp_display;   // display hsp
+    uint16_t    csp_display;   // display csp
 } thermostat_output_t;
 
 void init_thermostat(thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
@@ -106,5 +117,8 @@ void init_thermostat(thermostat_state_t*, thermostat_action_t*, thermostat_outpu
 uint32_t max(uint32_t, uint32_t);
 uint32_t min(uint32_t, uint32_t);
 
-void nearest_temperature(int *temp, int *display_temp, int *led_register);
+void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register);
+void update_timer_press(thermostat_state_t*);
+void timer_led_settings(thermostat_state_t*, int *led0, int *led1, int *led2, int *led3, int *num);
+
 #endif

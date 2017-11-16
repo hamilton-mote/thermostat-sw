@@ -16,6 +16,6 @@ typedef struct tlc59116_cfg_t {
 
 void tlc59116_init(tlc59116_cfg_t* cfg, nrf_drv_twi_t* p_instance);
 void tlc59116_set_led(tlc59116_cfg_t* cfg, int reg, int value);
-void tlc59116_off(tlc59116_cfg_t* cfg);
+void tlc59116_set_all(tlc59116_cfg_t* cfg, int value);
 
 #endif

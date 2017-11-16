@@ -53,15 +53,15 @@ void tlc59116_set_led(tlc59116_cfg_t* cfg, int reg, int value) {
     );
 }
 
-void tlc59116_off(tlc59116_cfg_t* cfg) {
-    uint8_t command[] = {0x0,0x0};
+void tlc59116_set_all(tlc59116_cfg_t* cfg, int value) {
+    uint8_t command[] = {0x0,value};
     uint8_t leds[] = {TLC59116_PWM0, TLC59116_PWM1, TLC59116_PWM2, TLC59116_PWM3, TLC59116_PWM4,
                     TLC59116_PWM5, TLC59116_PWM6, TLC59116_PWM7, TLC59116_PWM8, TLC59116_PWM9,
                     TLC59116_PWM10,TLC59116_PWM11,TLC59116_PWM12,TLC59116_PWM13,TLC59116_PWM14,
                     TLC59116_PWM15};
     for (int i=0;i<16;i++)
     {
-        command[0] = leds[i]; command[1] = 0x0;
+        command[0] = leds[i];
         nrf_drv_twi_tx(
             m_instance, cfg->address, command, sizeof(command), false
         );

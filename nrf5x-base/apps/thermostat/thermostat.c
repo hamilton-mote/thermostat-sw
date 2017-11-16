@@ -31,6 +31,8 @@ void init_thermostat(thermostat_state_t* state, thermostat_action_t* action, the
     state->on = true;
     state->is_heating = false;
     state->is_cooling = false;
+    state->temp_csp = 78;
+    state->temp_hsp = 72;
 }
 
 // TODO: need a method to get an action vector
@@ -151,7 +153,7 @@ uint32_t min(uint32_t a, uint32_t b) {
     return b;
 }
 
-void nearest_temperature(int *temp, int *display_temp, int *led_register) {
+void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register) {
     int i=1;
     if (*temp <= 58) {
         *display_temp = temperature_led_mapping[0][0];
@@ -180,3 +182,28 @@ void nearest_temperature(int *temp, int *display_temp, int *led_register) {
     }
 }
 
+void timer_led_settings(thermostat_state_t* state, int *led0, int *led1, int *led2, int *led3, int *num) {
+    *num = 0;
+    if (state->hold_timer >= timer_led_mapping[0][0]) (*num)++;
+    if (state->hold_timer >= timer_led_mapping[1][0]) (*num)++;
+    if (state->hold_timer >= timer_led_mapping[2][0]) (*num)++;
+    if (state->hold_timer >= timer_led_mapping[3][0]) (*num)++;
+
+    *led0 = timer_led_mapping[0][1];
+    *led1 = timer_led_mapping[1][1];
+    *led2 = timer_led_mapping[2][1];
+    *led3 = timer_led_mapping[3][1];
+}
+
+void update_timer_press(thermostat_state_t* state) {
+    if (state->hold_timer == MAX_TIMER_HOLD) {
+        state->hold_timer = 0;
+    } else {
+        uint16_t _newtimer = state->hold_timer + TIMER_INTERVAL;
+        if (_newtimer > MAX_TIMER_HOLD) {
+            state->hold_timer = MAX_TIMER_HOLD;
+        } else {
+            state->hold_timer = _newtimer;
+        }
+    }
+}
