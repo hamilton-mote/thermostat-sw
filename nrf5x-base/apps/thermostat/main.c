@@ -22,6 +22,7 @@
 #include "softdevice_handler.h"
 #include "thermostat.h"
 #include "tlc59116.h"
+#include "pca9557.h"
 #include "hdc1000.h"
 
 #define LED 19
@@ -30,7 +31,7 @@
 #define BLINK_TIMER_OP_QUEUE_SIZE          4  // Size of timer operation queues.
 
 // How long before the timer fires.
-#define BLINK_RATE     APP_TIMER_TICKS(1000, BLINK_TIMER_PRESCALER) // Blink every 1 seconds
+#define BLINK_RATE     APP_TIMER_TICKS(2000, BLINK_TIMER_PRESCALER) // Blink every 5 seconds
 
 // configure TWI
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
@@ -48,6 +49,9 @@ tlc59116_cfg_t spdriver_cfg = {
 tlc59116_cfg_t leddriver3_cfg = {
     .address = LED_DRIVER_3,
     .initial_value = 0x0,
+};
+pca9557_cfg_t relay_cfg = {
+    .address = RELAY_ADDR,
 };
 
 /*
@@ -177,10 +181,20 @@ int main(void) {
     timer_start();
 
     i2c_init();
+
+    // i2c port expander for relays
+    pca9557_init(&relay_cfg, &twi_instance);
+    // turn everything off
+    heat_off(&relay_cfg);
+    cool_off(&relay_cfg);
+    fan_off(&relay_cfg);
+
+    // initialize LED drivers
     tlc59116_init(&tempdriver_cfg, &twi_instance);
     tlc59116_init(&spdriver_cfg, &twi_instance);
     tlc59116_init(&leddriver3_cfg, &twi_instance);
 
+    // initialize temp/humidity sensor
     int ret = hdc1000_init(&sensor_cfg, &twi_instance);
     if (ret == 1) {
         tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);
@@ -230,6 +244,10 @@ int main(void) {
     }
     nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
 
+
+    //heat_on(&relay_cfg);
+    //cool_on(&relay_cfg);
+    //fan_on(&relay_cfg);
 
     // Enter main loop.
     while (1) {

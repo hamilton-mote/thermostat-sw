@@ -27,6 +27,8 @@
 #define LED_DRIVER_3 0x67
 #define ALLCALLADR 0x68
 
+#define RELAY_ADDR 24
+
 // TLC59116 registers
 #define TLC59116_MODE1 0x00
 #define TLC59116_MODE2 0x01
