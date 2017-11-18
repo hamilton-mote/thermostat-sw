@@ -136,18 +136,25 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
     // turn off old LED
     if (pin == SP_DEC) {
-        THERMOSTAT_STATE.temp_csp -= 2;
-        THERMOSTAT_STATE.temp_hsp -= 2;
-        draw_setpoints();
+        THERMOSTAT_ACTION.dec_sp = true;
+        THERMOSTAT_ACTION.inc_sp = false;
+        //THERMOSTAT_STATE.temp_csp -= 2;
+        //THERMOSTAT_STATE.temp_hsp -= 2;
+        //draw_setpoints();
     } else if (pin == SP_INC) {
-        THERMOSTAT_STATE.temp_csp += 2;
-        THERMOSTAT_STATE.temp_hsp += 2;
-        draw_setpoints();
+        THERMOSTAT_ACTION.dec_sp = false;
+        THERMOSTAT_ACTION.inc_sp = true;
+        //THERMOSTAT_STATE.temp_csp += 2;
+        //THERMOSTAT_STATE.temp_hsp += 2;
+        //draw_setpoints();
     } else if (pin == TIMER_BUTTON) {
-        update_timer_press(&THERMOSTAT_STATE);
-        draw_timer();
+        THERMOSTAT_ACTION.hold_timer = true;
+        //update_timer_press(&THERMOSTAT_STATE);
+        //draw_timer();
     }
-
+    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
+    state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
+    enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
 
 
@@ -188,7 +195,7 @@ int main(void) {
      * Initialize thermsotat state
      */
     init_thermostat(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, &THERMOSTAT_OUTPUT);
-    draw_setpoints();
+    //draw_setpoints();
 
     // Initialize buttons
     ret_code_t err_code;
@@ -229,6 +236,7 @@ int main(void) {
     while (1) {
         transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
+        enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
         sd_app_evt_wait();
     }
     return 0;

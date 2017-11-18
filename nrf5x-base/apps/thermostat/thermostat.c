@@ -26,6 +26,18 @@ int timer_led_mapping[4][2] = {
     {(4*TIMER_INTERVAL), TLC59116_PWM1},
 };
 
+void clean_action(thermostat_action_t *action) {
+    action->csp_direct = NULL;
+    action->hsp_direct = NULL;
+    action->timer_direct = NULL;
+    action->hysteresis = NULL;
+
+    action->hold_timer = false;
+    action->onoff = false;
+    action->inc_sp = false;
+    action->dec_sp = false;
+}
+
 void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action, thermostat_output_t* output) {
 
     // i2c port expander for relays
@@ -49,6 +61,8 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     state->is_cooling = false;
     state->temp_csp = 78;
     state->temp_hsp = 72;
+
+    clean_action(action);
 }
 
 // TODO: need a method to get an action vector
@@ -68,12 +82,11 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
 
     // handle inc/dec setpoint through buttons
     if (action->inc_sp) {
-        state->temp_hsp = min(state->temp_hsp+1, MAX_HSP);
-        state->temp_csp = min(state->temp_csp+1, MAX_CSP);
-    }
-    if (action->dec_sp) {
-        state->temp_hsp = max(state->temp_hsp-1, MIN_HSP);
-        state->temp_csp = max(state->temp_csp-1, MIN_CSP);
+        state->temp_hsp = min(state->temp_hsp+2, MAX_HSP);
+        state->temp_csp = min(state->temp_csp+2, MAX_CSP);
+    } else if (action->dec_sp) {
+        state->temp_hsp = max(state->temp_hsp-2, MIN_HSP);
+        state->temp_csp = max(state->temp_csp-2, MIN_CSP);
     }
 
     // handle setting hsp/csp directly next
@@ -84,10 +97,10 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->temp_csp = max(min(*(action->csp_direct), MAX_CSP), MIN_CSP);
     }
 
-    // decrement hold timer
-    if (state->hold_timer > 0) {
-        state->hold_timer -= TIMER_INTERVAL;
-    }
+    // TODO: decrement hold timer
+    //if (state->hold_timer > 0) {
+    //    state->hold_timer -= TIMER_INTERVAL;
+    //}
 
     // increase timer if button was pressed
     if (action->hold_timer) {
@@ -119,7 +132,9 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     }
 
     // done!
+    clean_action(action);
 }
+
 
 void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_output_t *output) {
     output->temp_display = state->temp_in;
@@ -154,9 +169,7 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     }
 
     // handle timer display
-    if (state->hold_timer) {
-        output->timer_led_num = (state->hold_timer / TIMER_INTERVAL); // int!
-    }
+    output->timer_led_num = (state->hold_timer / TIMER_INTERVAL); // int!
 }
 
 uint32_t max(uint32_t a, uint32_t b) {
@@ -222,4 +235,50 @@ void update_timer_press(thermostat_state_t* state) {
             state->hold_timer = _newtimer;
         }
     }
+}
+
+void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
+
+    // set relays
+    if (output->heat_stage_1) {
+        cool_off(&tstat->relay_cfg);
+        heat_on(&tstat->relay_cfg);
+    } else if (output->cool_stage_1) {
+        heat_off(&tstat->relay_cfg);
+        cool_on(&tstat->relay_cfg);
+    } else {
+        heat_off(&tstat->relay_cfg);
+        cool_off(&tstat->relay_cfg);
+    }
+
+
+    // draw timers
+    int num = output->timer_led_num;
+    if (num == 0) {
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], 0x0);
+    } else {
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], num >= 1 ? 0x0f : 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], num >= 2 ? 0x0f : 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], num >= 3 ? 0x0f : 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], num == 4 ? 0x0f : 0x0);
+    }
+
+
+    // draw setpoints
+
+    int led_register_temp;
+    tlc59116_set_all(&tstat->spdisplay_cfg, 0x0);
+
+    uint16_t _t;
+    nearest_temperature(&output->csp_display, &_t, &led_register_temp);
+    tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+
+    nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
+    tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+
+    // draw temperature
+
 }
