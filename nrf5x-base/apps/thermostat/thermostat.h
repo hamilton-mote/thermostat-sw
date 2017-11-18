@@ -34,12 +34,12 @@
 
 /** Thermostat Constraints **/
 // max/min heating set point
-#define MAX_HSP 70
-#define MIN_HSP 50
+#define MAX_HSP 90
+#define MIN_HSP 40
 
 // max/min cooling set point
 #define MAX_CSP 90
-#define MIN_CSP 70
+#define MIN_CSP 40
 
 // max/min hysteresis amounts
 #define MAX_HYST 2
