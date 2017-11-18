@@ -64,13 +64,19 @@ static void timer_handler (void* p_context) {
     int led_register_temp;
 
     // turn off old LED
-    nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
+    nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0);
 
     // turn on new LED
-    THERMOSTAT_OUTPUT.temp_display = (int)temp;
-    nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
+    THERMOSTAT_ACTION.temp = (uint16_t)temp;
+    nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
+
+    
+
+    //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
+    //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
+    //enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
 
 // Setup timer
@@ -112,45 +118,17 @@ static void i2c_init(void) {
     nrf_drv_twi_enable(&twi_instance);
 }
 
-void draw_setpoints() {
-    int led_register_temp;
-    tlc59116_set_all(&THERMOSTAT.spdisplay_cfg, 0x0);
-    nearest_temperature(&(THERMOSTAT_STATE.temp_csp), &(THERMOSTAT_OUTPUT.csp_display), &led_register_temp);
-    tlc59116_set_led(&THERMOSTAT.spdisplay_cfg, led_register_temp, 0xff);
-
-    nearest_temperature(&(THERMOSTAT_STATE.temp_hsp), &(THERMOSTAT_OUTPUT.hsp_display), &led_register_temp);
-    tlc59116_set_led(&THERMOSTAT.spdisplay_cfg, led_register_temp, 0xff);
-}
-
-void draw_timer() {
-    int led0, led1, led2, led3;
-    int num;
-    timer_led_settings(&THERMOSTAT_STATE, &led0, &led1, &led2, &led3, &num);
-    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led0, num >= 1 ? 0x0f : 0x0);
-    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led1, num >= 2 ? 0x0f : 0x0);
-    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led2, num >= 3 ? 0x0f : 0x0);
-    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led3, num == 4 ? 0x0f : 0x0);
-}
-
 void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
     // turn off old LED
     if (pin == SP_DEC) {
         THERMOSTAT_ACTION.dec_sp = true;
         THERMOSTAT_ACTION.inc_sp = false;
-        //THERMOSTAT_STATE.temp_csp -= 2;
-        //THERMOSTAT_STATE.temp_hsp -= 2;
-        //draw_setpoints();
     } else if (pin == SP_INC) {
         THERMOSTAT_ACTION.dec_sp = false;
         THERMOSTAT_ACTION.inc_sp = true;
-        //THERMOSTAT_STATE.temp_csp += 2;
-        //THERMOSTAT_STATE.temp_hsp += 2;
-        //draw_setpoints();
     } else if (pin == TIMER_BUTTON) {
         THERMOSTAT_ACTION.hold_timer = true;
-        //update_timer_press(&THERMOSTAT_STATE);
-        //draw_timer();
     }
     transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
@@ -234,10 +212,10 @@ int main(void) {
 
     // Enter main loop.
     while (1) {
+        sd_app_evt_wait();
         transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
-        sd_app_evt_wait();
     }
     return 0;
 }

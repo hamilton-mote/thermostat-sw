@@ -72,6 +72,7 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->on = !state->on; // toggle power
     }
 
+
     // copy over new temperature value
     state->temp_in = action->temp;
 
@@ -112,6 +113,7 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     if (action->timer_direct != NULL) {
         state->hold_timer = min(*(action->timer_direct), MAX_TIMER_HOLD);
     }
+
 
     // handle heating w/ hysteresis
     if (state->temp_in <= (state->temp_hsp - state->hysteresis)) {
@@ -241,12 +243,18 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
 
     // set relays
     if (output->heat_stage_1) {
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0xff);
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0x0);
         cool_off(&tstat->relay_cfg);
         heat_on(&tstat->relay_cfg);
     } else if (output->cool_stage_1) {
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0xff);
         heat_off(&tstat->relay_cfg);
         cool_on(&tstat->relay_cfg);
     } else {
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0x0);
         heat_off(&tstat->relay_cfg);
         cool_off(&tstat->relay_cfg);
     }
