@@ -26,7 +26,23 @@ int timer_led_mapping[4][2] = {
     {(4*TIMER_INTERVAL), TLC59116_PWM1},
 };
 
-void init_thermostat(thermostat_state_t* state, thermostat_action_t* action, thermostat_output_t* output) {
+void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action, thermostat_output_t* output) {
+
+    // i2c port expander for relays
+    pca9557_init(&tstat->relay_cfg, tstat->twi_instance);
+    // turn everything off
+    heat_off(&tstat->relay_cfg);
+    cool_off(&tstat->relay_cfg);
+    fan_off(&tstat->relay_cfg);
+
+    // initialize LED drivers
+    tlc59116_init(&tstat->tempdisplay_cfg, tstat->twi_instance);
+    tlc59116_init(&tstat->spdisplay_cfg, tstat->twi_instance);
+    tlc59116_init(&tstat->leddriver_cfg, tstat->twi_instance);
+
+    // initialize tmemp/humidity sensor
+    hdc1000_init(&tstat->sensor_cfg, tstat->twi_instance);
+
     state->hysteresis = 1.0;
     state->on = true;
     state->is_heating = false;
@@ -36,7 +52,7 @@ void init_thermostat(thermostat_state_t* state, thermostat_action_t* action, the
 }
 
 // TODO: need a method to get an action vector
-void transition(thermostat_state_t* state, thermostat_action_t* action, uint32_t interval) {
+void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action, uint32_t interval) {
     // copy the state of the onoff button
     if (action->onoff) {
         state->on = !state->on; // toggle power
@@ -105,7 +121,7 @@ void transition(thermostat_state_t* state, thermostat_action_t* action, uint32_t
     // done!
 }
 
-void state_to_output(thermostat_state_t *state, thermostat_output_t *output) {
+void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_output_t *output) {
     output->temp_display = state->temp_in;
 
     // handle if thermostat is off

@@ -20,10 +20,10 @@
 
 #include "app_timer.h"
 #include "softdevice_handler.h"
-#include "thermostat.h"
 #include "tlc59116.h"
 #include "pca9557.h"
 #include "hdc1000.h"
+#include "thermostat.h"
 
 #define LED 19
 // Some constants about timers
@@ -35,21 +35,6 @@
 
 // configure TWI
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
-hdc1000_cfg_t sensor_cfg = {
-    .address = TEMP_HUMID_SENSOR
-};
-tlc59116_cfg_t tempdriver_cfg = {
-    .address = LED_DRIVER_TEMP,
-    .initial_value = 0x0,
-};
-tlc59116_cfg_t spdriver_cfg = {
-    .address = LED_DRIVER_SP,
-    .initial_value = 0x0,
-};
-tlc59116_cfg_t leddriver3_cfg = {
-    .address = LED_DRIVER_3,
-    .initial_value = 0x0,
-};
 pca9557_cfg_t relay_cfg = {
     .address = RELAY_ADDR,
 };
@@ -57,6 +42,7 @@ pca9557_cfg_t relay_cfg = {
 /*
  * Thermostat state!
  */
+thermostat_t THERMOSTAT;
 thermostat_state_t THERMOSTAT_STATE;
 thermostat_action_t THERMOSTAT_ACTION;
 thermostat_output_t THERMOSTAT_OUTPUT;
@@ -71,7 +57,7 @@ static void timer_handler (void* p_context) {
     //led_toggle(LED);
     int16_t hum;
     int16_t temp;
-    hdc1000_read(&sensor_cfg, &temp, &hum);
+    hdc1000_read(&THERMOSTAT.sensor_cfg, &temp, &hum);
     temp = (1.8*temp+3200) / 100;
 
     uint16_t display_temp;
@@ -79,12 +65,12 @@ static void timer_handler (void* p_context) {
 
     // turn off old LED
     nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
-    tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0x0);
+    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0);
 
     // turn on new LED
     THERMOSTAT_OUTPUT.temp_display = (int)temp;
     nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
-    tlc59116_set_led(&tempdriver_cfg, led_register_temp, 0xff);
+    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0xff);
 }
 
 // Setup timer
@@ -128,22 +114,22 @@ static void i2c_init(void) {
 
 void draw_setpoints() {
     int led_register_temp;
-    tlc59116_set_all(&spdriver_cfg, 0x0);
+    tlc59116_set_all(&THERMOSTAT.spdisplay_cfg, 0x0);
     nearest_temperature(&(THERMOSTAT_STATE.temp_csp), &(THERMOSTAT_OUTPUT.csp_display), &led_register_temp);
-    tlc59116_set_led(&spdriver_cfg, led_register_temp, 0xff);
+    tlc59116_set_led(&THERMOSTAT.spdisplay_cfg, led_register_temp, 0xff);
 
     nearest_temperature(&(THERMOSTAT_STATE.temp_hsp), &(THERMOSTAT_OUTPUT.hsp_display), &led_register_temp);
-    tlc59116_set_led(&spdriver_cfg, led_register_temp, 0xff);
+    tlc59116_set_led(&THERMOSTAT.spdisplay_cfg, led_register_temp, 0xff);
 }
 
 void draw_timer() {
     int led0, led1, led2, led3;
     int num;
     timer_led_settings(&THERMOSTAT_STATE, &led0, &led1, &led2, &led3, &num);
-    tlc59116_set_led(&leddriver3_cfg, led0, num >= 1 ? 0x0f : 0x0);
-    tlc59116_set_led(&leddriver3_cfg, led1, num >= 2 ? 0x0f : 0x0);
-    tlc59116_set_led(&leddriver3_cfg, led2, num >= 3 ? 0x0f : 0x0);
-    tlc59116_set_led(&leddriver3_cfg, led3, num == 4 ? 0x0f : 0x0);
+    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led0, num >= 1 ? 0x0f : 0x0);
+    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led1, num >= 2 ? 0x0f : 0x0);
+    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led2, num >= 3 ? 0x0f : 0x0);
+    tlc59116_set_led(&THERMOSTAT.leddriver_cfg, led3, num == 4 ? 0x0f : 0x0);
 }
 
 void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
@@ -180,48 +166,42 @@ int main(void) {
     timer_init();
     timer_start();
 
+    // initialize i2c bus
     i2c_init();
 
-    // i2c port expander for relays
-    pca9557_init(&relay_cfg, &twi_instance);
-    // turn everything off
-    heat_off(&relay_cfg);
-    cool_off(&relay_cfg);
-    fan_off(&relay_cfg);
+    // configure thermostat
+    THERMOSTAT.twi_instance = &twi_instance;
+    THERMOSTAT.sensor_cfg.address = TEMP_HUMID_SENSOR;
 
-    // initialize LED drivers
-    tlc59116_init(&tempdriver_cfg, &twi_instance);
-    tlc59116_init(&spdriver_cfg, &twi_instance);
-    tlc59116_init(&leddriver3_cfg, &twi_instance);
+    THERMOSTAT.tempdisplay_cfg.address = LED_DRIVER_TEMP;
+    THERMOSTAT.tempdisplay_cfg.initial_value = 0x0;
 
-    // initialize temp/humidity sensor
-    int ret = hdc1000_init(&sensor_cfg, &twi_instance);
-    if (ret == 1) {
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM1, 0xff);
-    } else if (ret == 2) {
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM2, 0xff);
-    } else {
-        tlc59116_set_led(&tempdriver_cfg, TLC59116_PWM3, 0xff);
-    }
+    THERMOSTAT.spdisplay_cfg.address = LED_DRIVER_SP;
+    THERMOSTAT.spdisplay_cfg.initial_value = 0x0;
+
+    THERMOSTAT.leddriver_cfg.address = LED_DRIVER_3;
+    THERMOSTAT.leddriver_cfg.initial_value = 0x0;
+
+    THERMOSTAT.relay_cfg.address = RELAY_ADDR;
 
     /*
      * Initialize thermsotat state
      */
-    init_thermostat(&THERMOSTAT_STATE, &THERMOSTAT_ACTION, &THERMOSTAT_OUTPUT);
+    init_thermostat(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, &THERMOSTAT_OUTPUT);
     draw_setpoints();
 
     // Initialize buttons
     ret_code_t err_code;
     err_code = nrf_drv_gpiote_init();
     if (err_code > 0) {
-        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
         return 1;
     }
     nrf_drv_gpiote_in_config_t dec_in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     dec_in_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(SP_DEC, &dec_in_config, button_handler);
     if (err_code > 0) {
-        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
         return 1;
     }
     nrf_drv_gpiote_in_event_enable(SP_DEC, true);
@@ -230,7 +210,7 @@ int main(void) {
     inc_in_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(SP_INC, &inc_in_config, button_handler);
     if (err_code > 0) {
-        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
         return 1;
     }
     nrf_drv_gpiote_in_event_enable(SP_INC, true);
@@ -239,18 +219,16 @@ int main(void) {
     timer_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(TIMER_BUTTON, &timer_config, button_handler);
     if (err_code == NRF_ERROR_NO_MEM) {
-        tlc59116_set_all(&tempdriver_cfg, 0x0a);
+        tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
         return 1;
     }
     nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
 
 
-    //heat_on(&relay_cfg);
-    //cool_on(&relay_cfg);
-    //fan_on(&relay_cfg);
-
     // Enter main loop.
     while (1) {
+        transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
+        state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
         sd_app_evt_wait();
     }
     return 0;

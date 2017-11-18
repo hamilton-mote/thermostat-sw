@@ -6,7 +6,6 @@
 #include <stdbool.h>
 #include <math.h>
 #include "nrf_delay.h"
-#include "thermostat.h"
 
 #define PCA9557_ADDR 24
 #define PCA9557_IN_REG 0x0

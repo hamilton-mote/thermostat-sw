@@ -1,6 +1,9 @@
 #ifndef THERMOSTAT_H
 #define THERMOSTAT_H
 
+#include "tlc59116.h"
+#include "pca9557.h"
+#include "hdc1000.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -29,39 +32,6 @@
 
 #define RELAY_ADDR 24
 
-// TLC59116 registers
-#define TLC59116_MODE1 0x00
-#define TLC59116_MODE2 0x01
-#define TLC59116_PWM0 0x02
-#define TLC59116_PWM1 0x03
-#define TLC59116_PWM2 0x04
-#define TLC59116_PWM3 0x05
-#define TLC59116_PWM4 0x06
-#define TLC59116_PWM5 0x07
-#define TLC59116_PWM6 0x08
-#define TLC59116_PWM7 0x09
-#define TLC59116_PWM8 0x0a
-#define TLC59116_PWM9 0x0b
-#define TLC59116_PWM10 0x0c
-#define TLC59116_PWM11 0x0d
-#define TLC59116_PWM12 0x0e
-#define TLC59116_PWM13 0x0f
-#define TLC59116_PWM14 0x10
-#define TLC59116_PWM15 0x11
-#define TLC59116_GRPPWM 0x12
-#define TLC59116_GRPFREQ 0x13
-#define TLC59116_LEDOUT0 0x14
-#define TLC59116_LEDOUT1 0x15
-#define TLC59116_LEDOUT2 0x16
-#define TLC59116_LEDOUT3 0x17
-#define TLC59116_SUBADR1 0x18
-#define TLC59116_SUBADR2 0x19
-#define TLC59116_SUBADR3 0x1a
-#define TLC59116_ALLCALLADR 0x1b
-#define TLC59116_IREF 0x1c
-#define TLC59116_EFLAG1 0x1d
-#define TLC59116_EFLAG2 0x1e
-
 /** Thermostat Constraints **/
 // max/min heating set point
 #define MAX_HSP 70
@@ -78,6 +48,15 @@
 // maximum timer interval (1 hour)
 #define MAX_TIMER_HOLD 3600
 #define TIMER_INTERVAL 900
+
+typedef struct thermostat_t {
+    nrf_drv_twi_t   *twi_instance;
+    hdc1000_cfg_t   sensor_cfg;
+    tlc59116_cfg_t  tempdisplay_cfg;
+    tlc59116_cfg_t  spdisplay_cfg;
+    tlc59116_cfg_t  leddriver_cfg;
+    pca9557_cfg_t   relay_cfg;
+} thermostat_t;
 
 typedef struct thermostat_state_t {
     uint16_t    temp_in;    // measured inside temperature
@@ -114,7 +93,9 @@ typedef struct thermostat_output_t {
     uint16_t    csp_display;   // display csp
 } thermostat_output_t;
 
-void init_thermostat(thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
+void init_thermostat(thermostat_t*, thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
+void transition(thermostat_t*, thermostat_state_t*, thermostat_action_t*, uint32_t);
+void state_to_output(thermostat_t*, thermostat_state_t*, thermostat_output_t*);
 
 uint32_t max(uint32_t, uint32_t);
 uint32_t min(uint32_t, uint32_t);
