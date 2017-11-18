@@ -70,7 +70,7 @@ static void timer_handler (void* p_context) {
     // turn on new LED
     THERMOSTAT_OUTPUT.temp_display = (int)temp;
     nearest_temperature(&(THERMOSTAT_OUTPUT.temp_display), &display_temp, &led_register_temp);
-    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0xff);
+    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
 }
 
 // Setup timer
