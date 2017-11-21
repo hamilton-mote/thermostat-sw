@@ -23,6 +23,7 @@
 #include "tlc59116.h"
 #include "pca9557.h"
 #include "hdc1000.h"
+#include "mcp7940n.h"
 #include "thermostat.h"
 
 #define LED 19
@@ -37,6 +38,9 @@
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
 pca9557_cfg_t relay_cfg = {
     .address = RELAY_ADDR,
+};
+mcp7940n_cfg_t rtcc_cfg = {
+    .address = MCP7940N_ADDR,
 };
 
 /*
@@ -209,6 +213,8 @@ int main(void) {
     }
     nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
 
+    mcp7940n_init(&rtcc_cfg, &twi_instance);
+    rtcc_time_t time;
 
     // Enter main loop.
     while (1) {
@@ -216,6 +222,9 @@ int main(void) {
         transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
+
+        mcp7940n_readdate(&rtcc_cfg, &time);
+
     }
     return 0;
 }
