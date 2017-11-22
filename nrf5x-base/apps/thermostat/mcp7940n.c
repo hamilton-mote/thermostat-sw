@@ -28,8 +28,8 @@ void mcp7940n_init(mcp7940n_cfg_t* cfg, nrf_drv_twi_t* p_instance) {
     configure[0] = MCP7940N_RTCSEC;
     configure[1] = toBCD(RTC_SEC);
     configure[2] = toBCD(RTC_MIN);
-    // configure 24-hour clock (0x40 bit)
-    configure[3] = (toBCD(RTC_HOUR)) | (0x40);
+    // configure 24-hour clock (clear the 0x40 bit)
+    configure[3] = (toBCD(RTC_HOUR)) & (0xbf);
     configure[4] = 0; // day of week TODO
     configure[5] = toBCD(RTC_DAY);
     configure[6] = toBCD(RTC_MONTH);
