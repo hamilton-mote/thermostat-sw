@@ -2,6 +2,7 @@
 #define THERMOSTAT_H
 
 #include "tlc59116.h"
+#include "mcp7940n.h"
 #include "pca9557.h"
 #include "hdc1000.h"
 #include <stdint.h>
@@ -56,9 +57,18 @@ typedef struct thermostat_t {
     tlc59116_cfg_t  spdisplay_cfg;
     tlc59116_cfg_t  leddriver_cfg;
     pca9557_cfg_t   relay_cfg;
+    mcp7940n_cfg_t  rtcc_cfg;
 } thermostat_t;
 
 typedef struct thermostat_state_t {
+    // timer values for safety
+    uint32_t    heat_on_time;
+    uint32_t    heat_off_time;
+    uint32_t    cool_on_time;
+    uint32_t    cool_off_time;
+    uint32_t    fan_on_time;
+    uint32_t    fan_off_time;
+
     uint16_t    temp_in;    // measured inside temperature
     uint16_t    temp_csp;   // cooling setpoint
     uint16_t    temp_hsp;   // heating setpoint
@@ -66,6 +76,7 @@ typedef struct thermostat_state_t {
     uint8_t     hysteresis; // hysteresis value
     bool        is_heating; // true if heating
     bool        is_cooling; // true if cooling
+    bool        is_fan_on;  // true if fan is on
     bool        on;         // true if thermostat is active
 } thermostat_state_t;
 

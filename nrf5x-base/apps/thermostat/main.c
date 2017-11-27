@@ -23,10 +23,8 @@
 #include "tlc59116.h"
 #include "pca9557.h"
 #include "hdc1000.h"
-#include "mcp7940n.h"
 #include "thermostat.h"
 
-#define LED 19
 // Some constants about timers
 #define BLINK_TIMER_PRESCALER              0  // Value of the RTC1 PRESCALER register.
 #define BLINK_TIMER_OP_QUEUE_SIZE          4  // Size of timer operation queues.
@@ -39,9 +37,9 @@ nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
 pca9557_cfg_t relay_cfg = {
     .address = RELAY_ADDR,
 };
-mcp7940n_cfg_t rtcc_cfg = {
-    .address = MCP7940N_ADDR,
-};
+//mcp7940n_cfg_t rtcc_cfg = {
+//    .address = MCP7940N_ADDR,
+//};
 
 /*
  * Thermostat state!
@@ -58,7 +56,6 @@ int a = 0xaa;
 APP_TIMER_DEF(blink_timer);
 // Timer callback
 static void timer_handler (void* p_context) {
-    //led_toggle(LED);
     int16_t hum;
     int16_t temp;
     hdc1000_read(&THERMOSTAT.sensor_cfg, &temp, &hum);
@@ -173,6 +170,8 @@ int main(void) {
 
     THERMOSTAT.relay_cfg.address = RELAY_ADDR;
 
+    THERMOSTAT.rtcc_cfg.address = MCP7940N_ADDR;
+
     /*
      * Initialize thermsotat state
      */
@@ -213,7 +212,6 @@ int main(void) {
     }
     nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
 
-    mcp7940n_init(&rtcc_cfg, &twi_instance);
     rtcc_time_t time;
 
     // Enter main loop.
@@ -223,7 +221,7 @@ int main(void) {
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
-        mcp7940n_readdate(&rtcc_cfg, &time);
+        mcp7940n_readdate(&(THERMOSTAT.rtcc_cfg), &time);
 
     }
     return 0;

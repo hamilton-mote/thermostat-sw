@@ -37,10 +37,16 @@ void mcp7940n_init(mcp7940n_cfg_t* cfg, nrf_drv_twi_t* p_instance) {
 
     nrf_drv_twi_tx(m_instance, cfg->address, configure, sizeof(configure), false);
 
+    // configure trim
+    configure[0] = MCP7940N_OSCTRIM;
+    configure[1] = 0x7e; // calculated TRIM from 5-day experiment
+    nrf_drv_twi_tx(m_instance, cfg->address, configure, 2, false);
+
     // turn on the clock
     configure[0] = MCP7940N_RTCSEC;
     configure[1] = toBCD(RTC_SEC) | 0x80;
     nrf_drv_twi_tx(m_instance, cfg->address, configure, 2, false);
+
 }
 
 
@@ -65,11 +71,12 @@ void mcp7940n_readdate(mcp7940n_cfg_t* cfg, rtcc_time_t *output_time) {
 }
 
 // from MPA
-unsigned long date_to_binary(rtcc_time_t *datetime)
+uint32_t date_to_binary(rtcc_time_t *datetime)
 {
-   unsigned long iday;
-   unsigned long val;
-   iday = 365 * (datetime->tm_year - 12) + days_to_months[datetime->tm_mon-1] + (datetime->tm_mday - 1);
+   uint32_t iday;
+   uint32_t val;
+   // since 2017
+   iday = 365 * (datetime->tm_year - 17) + days_to_months[datetime->tm_mon-1] + (datetime->tm_mday - 1);
    iday = iday + (datetime->tm_year - 9) / 4;
    if ((datetime->tm_mon > 2) && ((datetime->tm_year % 4) == 0))
    {

@@ -1,5 +1,11 @@
 #include "thermostat.h"
 
+// marker values for the timer
+static rtcc_time_t last_updated_time;
+static uint32_t last_updated;
+static const uint32_t ON_OFF_THRESHOLD = 300; // 5 minutes
+static const uint32_t FREE_COOLING_TIME = 300;
+
 int temperature_led_mapping[16][2] = {
     {58, TLC59116_PWM0},
     {61, TLC59116_PWM1},
@@ -42,10 +48,14 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
 
     // i2c port expander for relays
     pca9557_init(&tstat->relay_cfg, tstat->twi_instance);
+
     // turn everything off
     heat_off(&tstat->relay_cfg);
     cool_off(&tstat->relay_cfg);
     fan_off(&tstat->relay_cfg);
+
+    // initialize rtc
+    mcp7940n_init(&tstat->rtcc_cfg, tstat->twi_instance);
 
     // initialize LED drivers
     tlc59116_init(&tstat->tempdisplay_cfg, tstat->twi_instance);
@@ -61,12 +71,25 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     state->is_cooling = false;
     state->temp_csp = 78;
     state->temp_hsp = 72;
+    state->heat_on_time = 0;
+    state->heat_off_time = 0;
+    state->cool_on_time = 0;
+    state->cool_off_time = 0;
+    state->fan_on_time = 0;
+    state->fan_off_time = 0;
+
+    mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
+    last_updated = date_to_binary(&last_updated_time);
 
     clean_action(action);
 }
 
 // TODO: need a method to get an action vector
 void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action, uint32_t interval) {
+    rtcc_time_t transition_time;
+    mcp7940n_readdate(&tstat->rtcc_cfg, &transition_time);
+    uint32_t elapsed = date_to_binary(&transition_time) - last_updated;
+
     // copy the state of the onoff button
     if (action->onoff) {
         state->on = !state->on; // toggle power
@@ -98,10 +121,9 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->temp_csp = max(min(*(action->csp_direct), MAX_CSP), MIN_CSP);
     }
 
-    // TODO: decrement hold timer
-    //if (state->hold_timer > 0) {
-    //    state->hold_timer -= TIMER_INTERVAL;
-    //}
+    if (state->hold_timer > 0) {
+        state->hold_timer -= elapsed;
+    }
 
     // increase timer if button was pressed
     if (action->hold_timer) {
@@ -114,23 +136,68 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->hold_timer = min(*(action->timer_direct), MAX_TIMER_HOLD);
     }
 
+    // increase times
+    if (state->is_heating) {
+        state->heat_on_time += elapsed;
+    } else {
+        state->heat_off_time += elapsed;
+    }
+
+    if (state->is_cooling) {
+        state->cool_on_time += elapsed;
+    } else {
+        state->cool_off_time += elapsed;
+    }
+
+    if (state->is_fan_on) {
+        state->fan_on_time += elapsed;
+    } else {
+        state->fan_off_time += elapsed;
+    }
+
+
+    // check if inactive/active times are safe for turning on heat/cool
+    bool can_heat_on = (state->heat_on_time > 0) || 
+                       ((state->heat_on_time == 0) && (state->heat_off_time > ON_OFF_THRESHOLD));
+    bool can_heat_off = (state->heat_on_time == 0);
+    bool can_cool_on = (state->cool_on_time > 0) || 
+                       ((state->cool_on_time == 0) && (state->cool_off_time > ON_OFF_THRESHOLD));
+    bool can_cool_off = (state->cool_on_time == 0);
+
 
     // handle heating w/ hysteresis
-    if (state->temp_in <= (state->temp_hsp - state->hysteresis)) {
+    if (state->temp_in <= (state->temp_hsp - state->hysteresis) && can_heat_on && can_cool_off) {
         state->is_heating = true;
         state->is_cooling = false;
-    } else if (state->is_heating && (state->temp_in <= (state->temp_hsp + state->hysteresis))) {
+    } else if (state->is_heating && (state->temp_in <= (state->temp_hsp + state->hysteresis)) && can_heat_on && can_cool_off) {
         state->is_heating = true;
         state->is_cooling = false;
-    } else if (state->temp_in >= (state->temp_csp + state->hysteresis)) {
+    } else if (state->temp_in >= (state->temp_csp + state->hysteresis) && can_heat_off && can_cool_on) {
         state->is_heating = false;
         state->is_cooling = true;
-    } else if (state->is_cooling && (state->temp_in >= (state->temp_csp - state->hysteresis))) {
+        state->is_fan_on = true;
+    } else if (state->is_cooling && (state->temp_in >= (state->temp_csp - state->hysteresis)) && can_heat_off && can_cool_on) {
         state->is_heating = false;
         state->is_cooling = true;
+        state->is_fan_on = true;
+    } else if (state->heat_on_time > 0 && state->heat_on_time < ON_OFF_THRESHOLD) {
+        state->is_heating = true;
+    } else if (state->heat_off_time > 0 && state->heat_off_time < ON_OFF_THRESHOLD) {
+        state->is_heating = false;
+    } else if (state->cool_on_time > 0 && state->cool_on_time < ON_OFF_THRESHOLD) {
+        state->is_cooling = true;
+    } else if (state->cool_off_time > 0 && state->cool_off_time < ON_OFF_THRESHOLD) {
+        state->is_cooling = false;
     } else {
         state->is_heating = false;
         state->is_cooling = false;
+    }
+
+    // handle free cooling
+    if (!state->is_cooling && state->cool_on_time > 0 && state->fan_on_time == 0) { // cooling has just turned off
+        state->is_fan_on = true;
+    } else if (!state->is_cooling && state->fan_on_time > FREE_COOLING_TIME) {
+        state->is_fan_on = false;
     }
 
     // done!
