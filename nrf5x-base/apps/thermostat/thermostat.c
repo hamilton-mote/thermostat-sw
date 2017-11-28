@@ -81,6 +81,10 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
     last_updated = date_to_binary(&last_updated_time);
 
+    cool_off(&tstat->relay_cfg);
+    heat_off(&tstat->relay_cfg);
+    fan_off(&tstat->relay_cfg);
+
     clean_action(action);
 }
 
