@@ -1,4 +1,5 @@
 #include "thermostat.h"
+#include "debug.h"
 
 // marker values for the timer
 static rtcc_time_t last_updated_time;
@@ -167,40 +168,56 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     bool can_cool_on = (state->cool_on_time > 0) || 
                        ((state->cool_on_time == 0) && (state->cool_off_time > ON_OFF_THRESHOLD));
     bool can_cool_off = (state->cool_on_time == 0);
+    //can_heat_on = true;
+    //can_heat_off = true;
+    //can_cool_on = true;
+    //can_cool_off = true;
 
+    PRINT("TIMERS=> HEAT? on: %d off: %d | COOL? on: %d off: %d \n", can_heat_on, can_heat_off, can_cool_on, can_cool_off);
 
     // handle heating w/ hysteresis
     if (state->temp_in <= (state->temp_hsp - state->hysteresis) && can_heat_on && can_cool_off) {
+        PRINT("heat1\n");
         state->is_heating = true;
         state->is_cooling = false;
     } else if (state->is_heating && (state->temp_in <= (state->temp_hsp + state->hysteresis)) && can_heat_on && can_cool_off) {
+        PRINT("heat2\n");
         state->is_heating = true;
         state->is_cooling = false;
     } else if (state->temp_in >= (state->temp_csp + state->hysteresis) && can_heat_off && can_cool_on) {
+        PRINT("cool1\n");
         state->is_heating = false;
         state->is_cooling = true;
         state->is_fan_on = true;
     } else if (state->is_cooling && (state->temp_in >= (state->temp_csp - state->hysteresis)) && can_heat_off && can_cool_on) {
+        PRINT("cool2\n");
         state->is_heating = false;
         state->is_cooling = true;
         state->is_fan_on = true;
     } else if (state->heat_on_time > 0 && state->heat_on_time < ON_OFF_THRESHOLD) {
+        PRINT("heat3\n");
         state->is_heating = true;
     } else if (state->heat_off_time > 0 && state->heat_off_time < ON_OFF_THRESHOLD) {
+        PRINT("heatoff1\n");
         state->is_heating = false;
     } else if (state->cool_on_time > 0 && state->cool_on_time < ON_OFF_THRESHOLD) {
+        PRINT("cool3\n");
         state->is_cooling = true;
     } else if (state->cool_off_time > 0 && state->cool_off_time < ON_OFF_THRESHOLD) {
+        PRINT("cooloff1\n");
         state->is_cooling = false;
     } else {
+        PRINT("alloff1\n");
         state->is_heating = false;
         state->is_cooling = false;
     }
 
     // handle free cooling
     if (!state->is_cooling && state->cool_on_time > 0 && state->fan_on_time == 0) { // cooling has just turned off
+        PRINT("freecoolon1\n");
         state->is_fan_on = true;
     } else if (!state->is_cooling && state->fan_on_time > FREE_COOLING_TIME) {
+        PRINT("freecooloff1\n");
         state->is_fan_on = false;
     }
 

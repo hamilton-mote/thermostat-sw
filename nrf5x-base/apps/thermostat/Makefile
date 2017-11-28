@@ -14,6 +14,14 @@ APPLICATION_SRCS += nrf_drv_gpiote.c
 
 APPLICATION_SRCS += led.c
 
+#APPLICATION_SRCS += nrf_drv_uart.c
+ifdef USERTT
+	APPLICATION_SRCS += nrf_log.c
+	APPLICATION_SRCS += SEGGER_RTT.c
+	APPLICATION_SRCS += SEGGER_RTT_printf.c
+	CFLAGS += -DNRF_LOG_USES_RTT=1 -DUSERTT
+endif
+
 RTC_YEAR=`date +'%y' | sed 's/^0//'`
 RTC_MONTH=`date +'%m' | sed 's/^0//'`
 RTC_DAY=`date +'%d' | sed 's/^0//'`

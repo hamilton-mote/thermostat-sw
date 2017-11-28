@@ -1,11 +1,8 @@
-/*
- * Send an advertisement periodically
- */
-
 #include <stdbool.h>
 #include <stdint.h>
 //#include "sdk_config.h"
 //#include "led.h"
+#include "debug.h"
 
 #include "board.h"
 #include "nrf.h"
@@ -73,7 +70,7 @@ static void timer_handler (void* p_context) {
     nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
 
-    
+
 
     //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
     //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
@@ -139,6 +136,10 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
 int main(void) {
 
+#ifdef USRTT
+    log_rtt_init();
+    PRINT("Debug to RTT\n");
+#endif
     // Need to set the clock to something
     nrf_clock_lf_cfg_t clock_lf_cfg = {
         .source        = NRF_CLOCK_LF_SRC_RC,
@@ -222,6 +223,8 @@ int main(void) {
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
         mcp7940n_readdate(&(THERMOSTAT.rtcc_cfg), &time);
+        PRINT("Date: Y %u M %u D %u\n", time.tm_year, time.tm_mon, time.tm_mday);
+        PRINT("H: %u M %u S %u\n", time.tm_hour, time.tm_min, time.tm_sec);
 
     }
     return 0;
