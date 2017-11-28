@@ -241,6 +241,12 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
         output->blinking = false;
     }
 
+    if (state->is_fan_on) {
+        output->fan_on = true;
+    } else {
+        output->fan_on = false;
+    }
+
     // handle timer display
     output->timer_led_num = (state->hold_timer / TIMER_INTERVAL); // int!
 }
@@ -328,6 +334,12 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
         tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0x0);
         heat_off(&tstat->relay_cfg);
         cool_off(&tstat->relay_cfg);
+    }
+
+    if (output->fan_on) {
+        fan_on(&tstat->relay_cfg);
+    } else {
+        fan_off(&tstat->relay_cfg);
     }
 
 
