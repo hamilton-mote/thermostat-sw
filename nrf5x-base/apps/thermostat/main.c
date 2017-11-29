@@ -1,26 +1,34 @@
+
 #include <stdbool.h>
 #include <stdint.h>
 //#include "sdk_config.h"
 //#include "led.h"
 #include "debug.h"
+#include "app_timer.h"
 
 #include "board.h"
 #include "nrf.h"
 #include "nrf_sdm.h"
 #include "nrf_gpio.h"
 #include "nrf_soc.h"
-#include "nrf_drv_config.h"
+//#include "nrf_drv_config.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_error.h"
 #include "nrf_assert.h"
 #include "nrf_drv_twi.h"
 
-#include "app_timer.h"
-#include "softdevice_handler.h"
 #include "tlc59116.h"
 #include "pca9557.h"
 #include "hdc1000.h"
 #include "thermostat.h"
+
+#include "ble_advdata.h"
+#include "nordic_common.h"
+#include "softdevice_handler.h"
+#include "ble_debug_assert_handler.h"
+//#include "app_util_platform.h"
+#include "simple_ble.h"
+#include "simple_adv.h"
 
 // Some constants about timers
 #define BLINK_TIMER_PRESCALER              0  // Value of the RTC1 PRESCALER register.
@@ -30,13 +38,7 @@
 #define BLINK_RATE     APP_TIMER_TICKS(2000, BLINK_TIMER_PRESCALER) // Blink every 5 seconds
 
 // configure TWI
-nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(1);
-pca9557_cfg_t relay_cfg = {
-    .address = RELAY_ADDR,
-};
-//mcp7940n_cfg_t rtcc_cfg = {
-//    .address = MCP7940N_ADDR,
-//};
+nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(0);
 
 /*
  * Thermostat state!
@@ -47,10 +49,9 @@ thermostat_action_t THERMOSTAT_ACTION;
 thermostat_output_t THERMOSTAT_OUTPUT;
 
 
-int a = 0xaa;
-
 // Timer data structure
 APP_TIMER_DEF(blink_timer);
+
 // Timer callback
 static void timer_handler (void* p_context) {
     int16_t hum;
@@ -70,13 +71,11 @@ static void timer_handler (void* p_context) {
     nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
 
-
-
     //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
     //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
     //enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
-
+//
 // Setup timer
 static void timer_init(void)
 {
@@ -134,9 +133,24 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 }
 
 
-int main(void) {
+static simple_ble_config_t ble_config = {
+    .platform_id       = 0x80,              // used as 4th octect in device BLE address
+    .device_id         = 0x8080,
+    .adv_name          = "thermostat!",       // used in advertisements if there is room
+    .adv_interval      = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
+    .min_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
+    .max_conn_interval = MSEC_TO_UNITS(5000, UNIT_1_25_MS)
+};
 
-#ifdef USRTT
+
+void ble_error(uint32_t error_code) {
+    while(1);
+}
+
+int main(void) {
+    uint32_t err_code;
+
+#ifdef USERTT
     log_rtt_init();
     PRINT("Debug to RTT\n");
 #endif
@@ -180,7 +194,6 @@ int main(void) {
     //draw_setpoints();
 
     // Initialize buttons
-    ret_code_t err_code;
     err_code = nrf_drv_gpiote_init();
     if (err_code > 0) {
         tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
@@ -215,6 +228,15 @@ int main(void) {
 
     rtcc_time_t time;
 
+    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
+    state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
+    enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
+
+    // Setup BLE
+    //simple_ble_init(&ble_config);
+    //simple_adv_only_name();
+
+    // Advertise because why not
     // Enter main loop.
     while (1) {
         sd_app_evt_wait();
