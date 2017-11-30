@@ -22,13 +22,15 @@
 #include "hdc1000.h"
 #include "thermostat.h"
 
-#include "ble_advdata.h"
 #include "nordic_common.h"
 #include "softdevice_handler.h"
-#include "ble_debug_assert_handler.h"
-//#include "app_util_platform.h"
-#include "simple_ble.h"
-#include "simple_adv.h"
+#ifdef BLE
+    #include "ble_advdata.h"
+    #include "ble_debug_assert_handler.h"
+    //#include "app_util_platform.h"
+    #include "simple_ble.h"
+    #include "simple_adv.h"
+#endif
 
 // Some constants about timers
 #define BLINK_TIMER_PRESCALER              0  // Value of the RTC1 PRESCALER register.
@@ -133,6 +135,7 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 }
 
 
+#ifdef BLE
 static simple_ble_config_t ble_config = {
     .platform_id       = 0x80,              // used as 4th octect in device BLE address
     .device_id         = 0x8080,
@@ -141,7 +144,7 @@ static simple_ble_config_t ble_config = {
     .min_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
     .max_conn_interval = MSEC_TO_UNITS(5000, UNIT_1_25_MS)
 };
-
+#endif
 
 void ble_error(uint32_t error_code) {
     while(1);
@@ -151,7 +154,7 @@ int main(void) {
     uint32_t err_code;
 
 #ifdef USERTT
-    log_rtt_init();
+    NRF_LOG_INIT(NULL);
     PRINT("Debug to RTT\n");
 #endif
     // Need to set the clock to something
@@ -233,8 +236,10 @@ int main(void) {
     enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
     // Setup BLE
-    //simple_ble_init(&ble_config);
-    //simple_adv_only_name();
+#ifdef BLE
+    simple_ble_init(&ble_config);
+    simple_adv_only_name();
+#endif
 
     // Advertise because why not
     // Enter main loop.

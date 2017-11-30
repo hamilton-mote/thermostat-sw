@@ -2,26 +2,34 @@ PROJECT_NAME = $(shell basename "$(realpath ./)")
 
 APPLICATION_SRCS = $(notdir $(wildcard ./*.c))
 APPLICATION_SRCS += softdevice_handler.c
-APPLICATION_SRCS += ble_advdata.c
-APPLICATION_SRCS += ble_conn_params.c
+ifdef BLE
+	APPLICATION_SRCS += ble_advdata.c
+	APPLICATION_SRCS += ble_conn_params.c
+	APPLICATION_SRCS += ble_srv_common.c
+endif
 APPLICATION_SRCS += app_timer.c
 APPLICATION_SRCS += app_error.c
-APPLICATION_SRCS += ble_srv_common.c
+APPLICATION_SRCS += app_error_weak.c
 APPLICATION_SRCS += app_util_platform.c
 APPLICATION_SRCS += nrf_drv_common.c
 APPLICATION_SRCS += nrf_drv_clock.c
 APPLICATION_SRCS += nrf_drv_twi.c
 APPLICATION_SRCS += nrf_drv_gpiote.c
 
-APPLICATION_SRCS += simple_ble.c
-APPLICATION_SRCS += simple_adv.c
+ifdef BLE
+	APPLICATION_SRCS += simple_ble.c
+	APPLICATION_SRCS += simple_adv.c
+endif
 
 #APPLICATION_SRCS += nrf_drv_uart.c
 ifdef USERTT
-	APPLICATION_SRCS += nrf_log.c
+	#APPLICATION_SRCS += nrf_log.c
+	APPLICATION_SRCS += RTT_Syscalls_GCC.c
 	APPLICATION_SRCS += SEGGER_RTT.c
 	APPLICATION_SRCS += SEGGER_RTT_printf.c
-	CFLAGS += -DNRF_LOG_USES_RTT=1 -DUSERTT
+	APPLICATION_SRCS += nrf_log_backend_serial.c
+	APPLICATION_SRCS += nrf_log_frontend.c
+	CFLAGS += -DNRF_LOG_ENABLED=1 -DNRF_LOG_BACKEND_SERIAL_USES_RTT=1 -DNRF_LOG_BACKEND_SERIAL_USES_UART=0 -DUSERTT=1
 endif
 
 RTC_YEAR=`date +'%y' | sed 's/^0//'`
