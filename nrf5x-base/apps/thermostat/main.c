@@ -50,6 +50,54 @@ thermostat_state_t THERMOSTAT_STATE;
 thermostat_action_t THERMOSTAT_ACTION;
 thermostat_output_t THERMOSTAT_OUTPUT;
 
+/*
+ * BLE adverts
+ */
+#ifdef BLE
+static simple_ble_config_t ble_config = {
+    .platform_id       = 0x80,              // used as 4th octect in device BLE address
+    .device_id         = 0x8080,
+    .adv_name          = "thermostat!",       // used in advertisements if there is room
+    .adv_interval      = MSEC_TO_UNITS(500, UNIT_0_625_MS),
+    .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
+    .max_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS)
+};
+
+static simple_ble_service_t tstat_report_service = {
+    .uuid128 = {{0x87, 0xa4, 0xde, 0xa0, 0x96, 0xea, 0x4e, 0xe6,
+                 0x87, 0x45, 0x83, 0x28, 0x89, 0x0f, 0xad, 0x7b}}
+};
+static simple_ble_char_t internal_status_char = {.uuid16 = 0x8910};
+
+/*
+ * internal_status:
+ * [0] = heating?
+ * [1] = cooling?
+ * [2] = can_heat_on?
+ * [3] = can_heat_off?
+ * [4] = can_cool_on?
+ * [5] = can_cool_off?
+ */
+static uint8_t internal_status[8] = {1,2,3,4,0,0,0,0};
+
+void services_init(void) {
+    simple_ble_add_service(&tstat_report_service);
+
+    simple_ble_add_characteristic(1, 0, 1, 0, // read, write, notify, vlen
+            8, (uint8_t*)&internal_status,
+            &tstat_report_service, &internal_status_char);
+}
+
+
+//void ble_evt_write(ble_evt_t* p_ble_evt) {
+//
+//    if (simple_ble_is_char_event(p_ble_evt, &internal_status_char)) {
+//    }
+//}
+
+#endif
+
+
 
 // Timer data structure
 APP_TIMER_DEF(blink_timer);
@@ -72,6 +120,17 @@ static void timer_handler (void* p_context) {
     THERMOSTAT_ACTION.temp = (uint16_t)temp;
     nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
+
+#ifdef BLE
+    internal_status[0] = THERMOSTAT_STATE.is_heating;
+    internal_status[1] = THERMOSTAT_STATE.is_cooling;
+    internal_status[2] = THERMOSTAT_STATE.is_fan_on;
+    internal_status[3] = THERMOSTAT_STATE.heat_on_time < 300;
+    internal_status[4] = THERMOSTAT_STATE.heat_off_time < 300;
+    internal_status[5] = THERMOSTAT_STATE.cool_on_time < 300;
+    internal_status[6] = THERMOSTAT_STATE.cool_off_time < 300;
+    simple_ble_notify_char(&internal_status_char);
+#endif
 
     //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
@@ -135,16 +194,6 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 }
 
 
-#ifdef BLE
-static simple_ble_config_t ble_config = {
-    .platform_id       = 0x80,              // used as 4th octect in device BLE address
-    .device_id         = 0x8080,
-    .adv_name          = "thermostat!",       // used in advertisements if there is room
-    .adv_interval      = MSEC_TO_UNITS(500, UNIT_0_625_MS),
-    .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
-    .max_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS)
-};
-#endif
 
 void ble_error(uint32_t error_code) {
     while(1);
