@@ -140,9 +140,9 @@ static simple_ble_config_t ble_config = {
     .platform_id       = 0x80,              // used as 4th octect in device BLE address
     .device_id         = 0x8080,
     .adv_name          = "thermostat!",       // used in advertisements if there is room
-    .adv_interval      = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
-    .min_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
-    .max_conn_interval = MSEC_TO_UNITS(5000, UNIT_1_25_MS)
+    .adv_interval      = MSEC_TO_UNITS(500, UNIT_0_625_MS),
+    .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
+    .max_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS)
 };
 #endif
 
@@ -157,6 +157,9 @@ int main(void) {
     NRF_LOG_INIT(NULL);
     PRINT("Debug to RTT\n");
 #endif
+
+#ifndef BLE
+    PRINT("Start softdevice from app\n");
     // Need to set the clock to something
     nrf_clock_lf_cfg_t clock_lf_cfg = {
         .source        = NRF_CLOCK_LF_SRC_RC,
@@ -166,6 +169,12 @@ int main(void) {
 
     // Initialize the SoftDevice handler module.
     SOFTDEVICE_HANDLER_INIT(&clock_lf_cfg, NULL);
+#else
+    PRINT("Defer SD to BLE\n");
+    // Setup BLE
+    simple_ble_init(&ble_config);
+    simple_adv_only_name();
+#endif
 
     timer_init();
     timer_start();
@@ -235,11 +244,6 @@ int main(void) {
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
     enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
-    // Setup BLE
-#ifdef BLE
-    simple_ble_init(&ble_config);
-    simple_adv_only_name();
-#endif
 
     // Advertise because why not
     // Enter main loop.
@@ -250,8 +254,7 @@ int main(void) {
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
         mcp7940n_readdate(&(THERMOSTAT.rtcc_cfg), &time);
-        PRINT("Date: Y %u M %u D %u\n", time.tm_year, time.tm_mon, time.tm_mday);
-        PRINT("H: %u M %u S %u\n", time.tm_hour, time.tm_min, time.tm_sec);
+        PRINT("Date: %u-%u-%u %u:%u:%u\n", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
 
     }
     return 0;
