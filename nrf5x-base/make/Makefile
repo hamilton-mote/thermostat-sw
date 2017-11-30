@@ -791,6 +791,7 @@ NRF_IC_UPPER = $(shell echo $(NRF_IC) | tr a-z A-Z)
 print-% : ; @echo $* = $($*)
 
 LINKER_SCRIPT ?= $(BASE_DIR)/make/ld/gcc_$(NRF_MODEL)_$(SOFTDEVICE_MODEL)_$(SOFTDEVICE_VERSION)_$(RAM_KB)_$(FLASH_KB).ld
+$(info $(LINKER_SCRIPT))
 OUTPUT_NAME ?= $(addsuffix _$(SOFTDEVICE_MODEL), $(PROJECT_NAME))
 DFU_OUTPUT_NAME ?= $(addsuffix _$(FLASH_KB), $(addsuffix _$(RAM_KB), $(addsuffix _$(SOFTDEVICE_MODEL), dfu)))
 
