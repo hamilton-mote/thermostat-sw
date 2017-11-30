@@ -106,7 +106,7 @@ typedef struct thermostat_output_t {
 } thermostat_output_t;
 
 void init_thermostat(thermostat_t*, thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
-void transition(thermostat_t*, thermostat_state_t*, thermostat_action_t*, uint32_t);
+void transition(thermostat_t*, thermostat_state_t*, thermostat_action_t*);
 void state_to_output(thermostat_t*, thermostat_state_t*, thermostat_output_t*);
 void enact_output(thermostat_t*, thermostat_output_t*);
 

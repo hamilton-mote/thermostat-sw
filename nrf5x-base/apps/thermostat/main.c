@@ -71,7 +71,7 @@ static void timer_handler (void* p_context) {
     nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
     tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
 
-    //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
+    //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
     //enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
@@ -127,7 +127,7 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
     } else if (pin == TIMER_BUTTON) {
         THERMOSTAT_ACTION.hold_timer = true;
     }
-    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 10000);
+    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
     enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
@@ -228,7 +228,7 @@ int main(void) {
 
     rtcc_time_t time;
 
-    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
+    transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
     enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
@@ -240,7 +240,7 @@ int main(void) {
     // Enter main loop.
     while (1) {
         sd_app_evt_wait();
-        transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION, 1000000);
+        transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
         enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 

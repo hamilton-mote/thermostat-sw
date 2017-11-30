@@ -90,7 +90,7 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
 }
 
 // TODO: need a method to get an action vector
-void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action, uint32_t interval) {
+void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_action_t* action) {
     rtcc_time_t transition_time;
     mcp7940n_readdate(&tstat->rtcc_cfg, &transition_time);
     uint32_t elapsed = date_to_binary(&transition_time) - last_updated;
