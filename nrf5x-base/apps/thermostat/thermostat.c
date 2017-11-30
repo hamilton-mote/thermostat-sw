@@ -278,7 +278,7 @@ uint32_t min(uint32_t a, uint32_t b) {
     return b;
 }
 
-void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register) {
+void nearest_temperature(uint8_t *temp, uint8_t *display_temp, int *led_register) {
     int i=1;
     if (*temp <= 58) {
         *display_temp = temperature_led_mapping[0][0];
@@ -380,7 +380,7 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
     int led_register_temp;
     tlc59116_set_all(&tstat->spdisplay_cfg, 0x0);
 
-    uint16_t _t;
+    uint8_t _t;
     nearest_temperature(&output->csp_display, &_t, &led_register_temp);
     tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
 
