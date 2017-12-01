@@ -105,6 +105,19 @@ typedef struct thermostat_output_t {
     uint8_t     csp_display;    // display csp
 } thermostat_output_t;
 
+typedef struct _thermostat_report_t {
+    uint8_t     temp_in;
+    uint8_t     temp_hsp;
+    uint8_t     temp_csp;
+    uint8_t     state;
+    uint16_t    hold_timer;
+} _thermostat_report_t;
+
+typedef union thermostat_report_t {
+    uint8_t bytes[8];
+    _thermostat_report_t report;
+} thermostat_report_t;
+
 void init_thermostat(thermostat_t*, thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
 void transition(thermostat_t*, thermostat_state_t*, thermostat_action_t*);
 void state_to_output(thermostat_t*, thermostat_state_t*, thermostat_output_t*);

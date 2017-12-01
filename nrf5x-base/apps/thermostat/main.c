@@ -68,6 +68,7 @@ static simple_ble_service_t tstat_report_service = {
                  0x87, 0x45, 0x83, 0x28, 0x89, 0x0f, 0xad, 0x7b}}
 };
 static simple_ble_char_t internal_status_char = {.uuid16 = 0x8910};
+static simple_ble_char_t tstat_status_char = {.uuid16 = 0x8911};
 
 /*
  * internal_status:
@@ -80,12 +81,18 @@ static simple_ble_char_t internal_status_char = {.uuid16 = 0x8910};
  */
 static uint8_t internal_status[8] = {1,2,3,4,0,0,0,0};
 
+static thermostat_report_t report;
+
 void services_init(void) {
     simple_ble_add_service(&tstat_report_service);
 
     simple_ble_add_characteristic(1, 0, 1, 0, // read, write, notify, vlen
             8, (uint8_t*)&internal_status,
             &tstat_report_service, &internal_status_char);
+
+    simple_ble_add_characteristic(1, 0, 1, 0, // read, write, notify, vlen
+            8, (uint8_t*)&report.bytes,
+            &tstat_report_service, &tstat_status_char);
 }
 
 
@@ -130,6 +137,35 @@ static void timer_handler (void* p_context) {
     internal_status[5] = THERMOSTAT_STATE.cool_on_time < 300;
     internal_status[6] = THERMOSTAT_STATE.cool_off_time < 300;
     simple_ble_notify_char(&internal_status_char);
+
+    report.report.temp_in = THERMOSTAT_STATE.temp_in;
+    report.report.temp_hsp = THERMOSTAT_STATE.temp_hsp;
+    report.report.temp_csp = THERMOSTAT_STATE.temp_csp;
+    report.report.hold_timer = THERMOSTAT_STATE.hold_timer;
+    if (THERMOSTAT_STATE.is_heating) {
+        report.report.state |= 0x08;
+    } else {
+        report.report.state &= 0xf7;
+    }
+
+    if (THERMOSTAT_STATE.is_cooling) {
+        report.report.state |= 0x04;
+    } else {
+        report.report.state &= 0xfb;
+    }
+
+    if (THERMOSTAT_STATE.is_fan_on) {
+        report.report.state |= 0x02;
+    } else {
+        report.report.state &= 0xfd;
+    }
+
+    if (THERMOSTAT_STATE.on) {
+        report.report.state |= 0x01;
+    } else {
+        report.report.state &= 0xfe;
+    }
+    simple_ble_notify_char(&tstat_status_char);
 #endif
 
     //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
