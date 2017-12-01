@@ -126,13 +126,14 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->temp_csp = max(min(*(action->csp_direct), MAX_CSP), MIN_CSP);
     }
 
+    PRINT("timer val: %d, elapsed %u\n", state->hold_timer, elapsed);
     if (state->hold_timer > 0) {
         state->hold_timer -= elapsed;
     }
 
     // increase timer if button was pressed
     if (action->hold_timer) {
-        if (state->hold_timer == MAX_TIMER_HOLD) state->hold_timer = 0;
+        if (state->hold_timer >= MAX_TIMER_HOLD - 30) state->hold_timer = 0;
         else state->hold_timer = min(state->hold_timer+TIMER_INTERVAL, MAX_TIMER_HOLD);
     }
 
@@ -223,6 +224,10 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
 
     // done!
     clean_action(action);
+
+    // update interval timer
+    mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
+    last_updated = date_to_binary(&last_updated_time);
 }
 
 
@@ -265,7 +270,13 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     }
 
     // handle timer display
-    output->timer_led_num = (state->hold_timer / TIMER_INTERVAL); // int!
+    if (state->hold_timer > 0) {
+        // numerical trick for doing round-up division on positive ints
+        // https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+        output->timer_led_num = (state->hold_timer + TIMER_INTERVAL - 1) / TIMER_INTERVAL; // int!
+    } else {
+        output->timer_led_num = 0;
+    }
 }
 
 uint32_t max(uint32_t a, uint32_t b) {
