@@ -173,8 +173,7 @@ func main() {
 
 	service := bwClient.RegisterService(baseuri, "s.thermocat")
 	iface = service.RegisterInterface("_", "i.xbos.thermostat")
-
-	params.MergeMetadata(bwClient)
+	fmt.Println("publishing on", iface.SignalURI("info"))
 
 	d, err := gatt.NewDevice(option.DefaultClientOptions...)
 	if err != nil {
