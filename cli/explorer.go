@@ -1,19 +1,26 @@
 package main
 
 import (
-	//"flag"
 	"fmt"
 	"log"
-	//"os"
 	"strings"
 	"time"
 
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
+
+	"github.com/immesys/spawnpoint/spawnable"
+	bw2 "gopkg.in/immesys/bw2bind.v5"
 )
 
 var done = make(chan struct{})
 var tstat = new(Thermostat)
+var bwClient *bw2.BW2Client
+var iface *bw2.Interface
+
+const (
+	PONUM = "2.1.1.0"
+)
 
 func onStateChanged(d gatt.Device, s gatt.State) {
 	fmt.Println("State:", s)
@@ -119,6 +126,30 @@ func onPeriphConnected(p gatt.Peripheral, err error) {
 			is_tstat_on := (state & 0x01) > 0
 			fmt.Printf("Temp: %d. [HSP, CSP]: %d, %d\n", temp_in, temp_hsp, temp_csp)
 			fmt.Printf("Tstat? %v Heat? %v Cool? %v Fan? %v Timer: %d\n", is_tstat_on, is_heating, is_cooling, is_fan_on, hold_timer)
+			var intstate = 3
+			if is_heating {
+				intstate = 1
+			} else if is_cooling {
+				intstate = 2
+			} else if !is_tstat_on {
+				intstate = 0
+			}
+
+			msg := map[string]interface{}{
+				"temperature":      temp_in,
+				"heating_setpoint": temp_hsp,
+				"cooling_setpoint": temp_csp,
+				"override":         true,
+				"fan":              is_fan_on,
+				"mode":             3,
+				"state":            intstate,
+				"time":             time.Now().UnixNano()}
+			po, err := bw2.CreateMsgPackPayloadObject(bw2.FromDotForm(PONUM), msg)
+			if err != nil {
+				panic(err)
+			}
+			iface.PublishSignal("info", po)
+
 		}
 	}
 
@@ -131,6 +162,19 @@ func onPeriphDisconnected(p gatt.Peripheral, err error) {
 }
 
 func main() {
+	bwClient = bw2.ConnectOrExit("")
+
+	params := spawnable.GetParamsOrExit()
+	bwClient.OverrideAutoChainTo(true)
+	bwClient.SetEntityFromEnvironOrExit()
+
+	baseuri := params.MustString("svc_base_uri")
+	//poll_interval := params.MustString("poll_interval")
+
+	service := bwClient.RegisterService(baseuri, "s.thermocat")
+	iface = service.RegisterInterface("_", "i.xbos.thermostat")
+
+	params.MergeMetadata(bwClient)
 
 	d, err := gatt.NewDevice(option.DefaultClientOptions...)
 	if err != nil {
@@ -146,6 +190,7 @@ func main() {
 	)
 
 	d.Init(onStateChanged)
+
 	<-done
 	fmt.Println("Done")
 }
