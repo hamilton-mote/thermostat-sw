@@ -1,0 +1,23 @@
+
+Remember we altered the RAM start size in
+
+../../make/../make/ld/gcc_nrf51_s130_2.0.1_16_256.ld
+
+# 
+
+Remember to set D19 to INPUT on the Hamilton!
+
+## BLE
+
+1st byte: temperature
+2nd byte: heating setpoint
+3rd byte: cooling setpoint
+4th byte:
+    0x01: thermostat on?
+    0x02: fan on?
+    0x04: cooling on?
+    0x08: heating on?
+5th + 6th byte: hold timer 5th + 6th byte (little endian)
+
+service: 7bad890f-2883-4587-e64e-ea96a0dea487
+characteristic: 7bad8911-2883-4587-e64e-ea96a0dea487
