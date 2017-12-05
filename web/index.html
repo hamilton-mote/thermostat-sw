@@ -1,0 +1,202 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="static/css/materialize.min.css"  media="screen,projection"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" rel="stylesheet" href="static/css/site.css" />
+    <link type="text/css" rel="stylesheet" href="static/css/graph.css">
+    <link type="text/css" rel="stylesheet" href="static/css/detail.css">
+    <link type="text/css" rel="stylesheet" href="static/css/legend.css">
+    <link type="text/css" rel="stylesheet" href="static/css/extensions.css">
+  	<title>Thermostat</title>
+  </head>
+  <body>
+  <body>
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="static/js/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="static/js/materialize.min.js"></script>
+    <script type="text/javascript" src="static/js/d3.v3.js"></script>
+    <script type="text/javascript" src="static/js/rickshaw.js"></script>
+    <div class="container">
+        <div class="row">
+            <div class="center-align card darken-1">
+                <div class="card-content">
+                    <span class="card-title">Thermostat</span>
+                </div>
+                <div class="row">
+                    <div class="col s6">
+                        <p class="tstat_attr" >Temperature: <span id="temp">72.0F</span></p>
+                        <p class="tstat_attr" >Heating Setpoint: <span id="hsp">68.0F</span></p>
+                        <p class="tstat_attr" >Cooling Setpoint: <span id="csp">76.0F</span></p>
+                    </div>
+                    <div class="col s2">
+                        <p><b>Heating</b></p>
+                        <p id='heatstate'>NO</p>
+                    </div>
+                    <div class="col s2">
+                        <p><b>Cooling</b></p>
+                        <p id='coolstate'>NO</p>
+                    </div>
+                    <div class="col s2">
+                        <p><b>Fan</b></p>
+                        <p id='fanstate'>NO</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col s2" id="axis0"></div>
+                    <div class="col s10" id="chart"></div>
+                </div>
+
+                <div class="card-action">
+                    <a id='connect' onClick="onConnectClick()" href="#">Connect Thermostat</a>
+                    <a id='disconnect' href="#">Disconnect</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        // copy from https://googlechrome.github.io/samples/web-bluetooth/read-characteristic-value-changed.html
+        var bluetoothDevice;
+        var tstatChar;
+
+        function onConnectClick() {
+            return (bluetoothDevice ? Promise.resolve() : requestDevice())
+                .then(connectDevice)
+                .then(_ => {
+                    console.log("Reading device")
+                    return tstatChar.readValue();
+                })
+                .catch(error => {
+                    console.error("!!",error)
+                });
+        }
+
+        function requestDevice() {
+            console.log("Requesting BLE device");
+            return navigator.bluetooth.requestDevice({
+                    filters:[{"name":"thermostat!"}],
+                    optionalServices: ['7bad890f-2883-4587-e64e-ea96a0dea487']
+                })
+                .then(device => {
+                    bluetoothDevice = device;
+                    bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                });
+        }
+
+        function connectDevice() {
+            if (bluetoothDevice.gatt.connected && tstatChar) {
+                return Promise.resolve();
+            }
+
+            console.log("Connecting to GATT server");
+            return bluetoothDevice.gatt.connect()
+                .then(server => {
+                    console.log(server);
+                    console.log("Get thermostat service");
+                    return server.getPrimaryService("7bad890f-2883-4587-e64e-ea96a0dea487");
+                })
+                .then(service => {
+                    console.log("Get characteristic");
+                    console.log(service);
+                    return service.getCharacteristic("7bad8911-2883-4587-e64e-ea96a0dea487");
+                })
+                .then(characteristic => {
+                    console.log("Start listening");
+                    tstatChar = characteristic;
+                    return tstatChar.startNotifications().then(_ => {
+                            console.log('> Notifications started');
+                            tstatChar.addEventListener('characteristicvaluechanged',
+                                    handleUpdate);
+                            });
+                })
+                .catch(error => {
+                    console.error(error)
+                });
+        }
+
+        function handleUpdate(event) {
+            let temp = event.target.value.getUint8(0);
+            let hsp = event.target.value.getUint8(1);
+            let csp = event.target.value.getUint8(2);
+            let state = event.target.value.getUint8(3);
+            document.getElementById("temp").innerHTML = temp + ' F';
+            document.getElementById("hsp").innerHTML = hsp + ' F';
+            document.getElementById("csp").innerHTML = csp + ' F';
+            let is_heating = (state & 0x08) > 0;
+            let is_cooling = (state & 0x04) > 0;
+            let is_fan_on = (state & 0x02) > 0;
+            let is_tstat_on = (state & 0x01) > 0;
+            document.getElementById("heatstate").innerHTML = is_heating ? '<b>ON</b>' : 'OFF';
+            document.getElementById("coolstate").innerHTML = is_cooling ? '<b>ON</b>' : 'OFF';
+            document.getElementById("fanstate").innerHTML = is_fan_on ? '<b>ON</b>' : 'OFF';
+            console.log('Temp > '+temp+' HSP: ' + hsp + ' CSP: ' + csp);
+            console.log('Heat? '+is_heating + ' Cool? ' + is_cooling + ' Fan? ' + is_fan_on + ' tstat? ' + is_tstat_on);
+            addData(temp, hsp, csp);
+        }
+
+        function onDisconnected() {
+            console.log("Disconnected");
+            connectDevice()
+            .catch(error => {
+                console.error(error);
+            });
+        }
+
+        var tv = 250;
+        // instantiate our graph!
+        var scale = d3.scale.linear().domain([40, 120]).nice();
+        var graph = new Rickshaw.Graph( {
+                        element: document.getElementById("chart"),
+                        width: 900,
+                        height: 500,
+                        renderer: 'line',
+                        series: new Rickshaw.Series.FixedDuration(
+                            [{ name: 'one' , 'color': 'green', scale: scale}, 
+                             {name: 'two', color: 'red', scale: scale}, 
+                             {name: 'three', color: 'steelblue', scale: scale}],
+                            undefined, {
+                            timeInterval: tv,
+                            maxDataPoints: 100,
+                            timeBase: new Date().getTime() / 1000
+                        }) 
+                    } );
+        new Rickshaw.Graph.Axis.Y.Scaled({
+            element: document.getElementById('axis0'),
+            graph: graph,
+            orientation: 'left',
+            scale: scale,
+            tickFormat: Rickshaw.Fixtures.Number.formatKMBT
+        });
+        new Rickshaw.Graph.Axis.Time({
+          graph: graph,
+            tickFormat: function(x){
+                return new Date(x * 1000).toLocaleTimeString();
+            }
+          }).render();
+
+          new Rickshaw.Graph.HoverDetail({
+            graph: graph
+            });
+
+        graph.render();
+
+// add some data every so often
+
+        function addData(temp, hsp, csp) {
+            var data = {
+                one: temp,
+                two: hsp,
+                three: csp
+            }
+            graph.series.addData(data);
+            graph.render();
+        }
+
+
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,105 @@
+body {
+    margin:40px auto;
+    line-height:1.6;
+    font-size:18px;
+    font-family: Inconsolata, monospace;
+    color:#444;
+    padding:0 10px;
+    font-weight: 400;
+    line-height: 24px;
+}
+
+.tstat_attr {
+  text-align: left;
+  padding-left: 50px;
+}
+
+span {
+    font-weight: bold;
+}
+
+h1,h2,h3 {
+    line-height:1.2;
+    color:#333;
+    text-align: left;
+}
+a {
+    text-decoration: none;
+}
+a:link {
+    color: black;
+}
+a:visited {
+    color: black;
+}
+a:active {
+    color: black;
+}
+a:hover {
+    color: blue;
+    border-bottom:1px dotted black;
+}
+.CodeMirror {
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+}
+#resultstable {
+}
+.listhighlight:hover {
+    background-color: #eee;
+}
+.listhighlight {
+    color: black;
+}
+header, main, footer {
+  padding-left: 200px;
+}
+
+@media only screen and (max-width : 992px) {
+  header, main, footer {
+    padding-left: 0;
+  }
+}
+.helptitle {
+       color: blue;
+       font-size: 30px;
+       border-bottom: 1px solid blue;
+}
+
+#mynetwork {
+  width: 100%;
+  height: 100%;
+  border: 1px solid lightgray;
+}
+
+svg {
+    text-align: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+.link {
+  stroke: #aaa;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  stroke:#333;
+  cursos:pointer;
+}
+
+.node circle{
+  stroke:#fff;
+  stroke-width:3px;
+}
+
+#searchtext {
+  border: 1px solid gray;
+  text: gray;
+}
+
+.line {
+    fill: none;
+    stroke: #000;
+    stroke-width: 1.5px;
+}
