@@ -19,7 +19,7 @@
 #define D25    25
 #define SP_DEC    18
 #define SP_INC    19
-#define POWER    24
+#define POWER_BUTTON    24
 #define TIMER_BUTTON    25
 #define PIR    6
 
@@ -98,7 +98,7 @@ typedef struct thermostat_output_t {
     bool        cool_stage_1;   // true if enable cooling stage 1
     bool        cool_stage_2;   // true if enable cooling stage 2
     bool        fan_on;         // true if enable fan
-    bool        blinking;       // blink to indicate action?
+    bool        tstat_on;       // true if tstat is on
     uint8_t     timer_led_num;  // number of timer LEDs to display
     uint8_t     temp_display;   // which temperature to display?
     uint8_t     hsp_display;    // display hsp

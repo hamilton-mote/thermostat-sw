@@ -25,7 +25,6 @@ endif
 
 #APPLICATION_SRCS += nrf_drv_uart.c
 ifdef USERTT
-$(info USERTT)
 #APPLICATION_SRCS += nrf_log.c
 APPLICATION_SRCS += RTT_Syscalls_GCC.c
 APPLICATION_SRCS += SEGGER_RTT.c

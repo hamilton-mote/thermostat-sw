@@ -50,10 +50,6 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     // i2c port expander for relays
     pca9557_init(&tstat->relay_cfg, tstat->twi_instance);
 
-    // turn everything off
-    heat_off(&tstat->relay_cfg);
-    cool_off(&tstat->relay_cfg);
-    fan_off(&tstat->relay_cfg);
 
     // initialize rtc
     mcp7940n_init(&tstat->rtcc_cfg, tstat->twi_instance);
@@ -67,7 +63,7 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     hdc1000_init(&tstat->sensor_cfg, tstat->twi_instance);
 
     state->hysteresis = 1.0;
-    state->on = true;
+    state->on = false;
     state->is_heating = false;
     state->is_cooling = false;
     state->temp_csp = 78;
@@ -82,8 +78,9 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
     last_updated = date_to_binary(&last_updated_time);
 
-    cool_off(&tstat->relay_cfg);
+    // turn everything off
     heat_off(&tstat->relay_cfg);
+    cool_off(&tstat->relay_cfg);
     fan_off(&tstat->relay_cfg);
 
     clean_action(action);
@@ -169,10 +166,10 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     bool can_cool_on = (state->cool_on_time > 0) || 
                        ((state->cool_on_time == 0) && (state->cool_off_time > ON_OFF_THRESHOLD));
     bool can_cool_off = (state->cool_on_time == 0);
-    //can_heat_on = true;
-    //can_heat_off = true;
-    //can_cool_on = true;
-    //can_cool_off = true;
+    can_heat_on = true;
+    can_heat_off = true;
+    can_cool_on = true;
+    can_cool_off = true;
 
     PRINT("TIMERS=> HEAT? on: %d off: %d | COOL? on: %d off: %d \n", can_heat_on, can_heat_off, can_cool_on, can_cool_off);
 
@@ -222,6 +219,13 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->is_fan_on = false;
     }
 
+    // if thermostat is off, turn various state parts off
+    if (!state->on) {
+        state->is_heating = false;
+        state->is_cooling = false;
+        state->is_fan_on = false;
+    }
+
     // done!
     clean_action(action);
 
@@ -235,6 +239,7 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     output->temp_display = state->temp_in;
 
     // handle if thermostat is off
+    output->tstat_on = state->on;
     if (!state->on) {
         output->heat_stage_1 = false;
         output->heat_stage_2 = false;
@@ -252,15 +257,12 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     if (state->is_heating) {
         output->heat_stage_1 = true;
         output->cool_stage_1 = false;
-        output->blinking = true;
     } else if (state->is_cooling) {
         output->heat_stage_1 = false;
         output->cool_stage_1 = true;
-        output->blinking = true;
     } else {
         output->heat_stage_1 = false;
         output->cool_stage_1 = false;
-        output->blinking = false;
     }
 
     if (state->is_fan_on) {
@@ -372,32 +374,34 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
 
 
     // draw timers
-    int num = output->timer_led_num;
-    if (num == 0) {
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], 0x0);
-    } else {
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], num >= 1 ? 0x0f : 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], num >= 2 ? 0x0f : 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], num >= 3 ? 0x0f : 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], num == 4 ? 0x0f : 0x0);
-    }
 
-
-    // draw setpoints
-
-    int led_register_temp;
+    // reset setpoint drawing
     tlc59116_set_all(&tstat->spdisplay_cfg, 0x0);
 
-    uint8_t _t;
-    nearest_temperature(&output->csp_display, &_t, &led_register_temp);
-    tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+    if (output->tstat_on) {
+        int num = output->timer_led_num;
+        if (num == 0) {
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], 0x0);
+        } else {
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], num >= 1 ? 0x0f : 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], num >= 2 ? 0x0f : 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], num >= 3 ? 0x0f : 0x0);
+            tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], num == 4 ? 0x0f : 0x0);
+        }
 
-    nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
-    tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+        // draw setpoints
 
-    // draw temperature
+        int led_register_temp;
+        uint8_t _t;
+        nearest_temperature(&output->csp_display, &_t, &led_register_temp);
+        tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
 
+        nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
+        tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+
+        // draw temperature
+    }
 }

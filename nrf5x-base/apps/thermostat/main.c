@@ -223,6 +223,8 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
         THERMOSTAT_ACTION.inc_sp = true;
     } else if (pin == TIMER_BUTTON) {
         THERMOSTAT_ACTION.hold_timer = true;
+    } else if (pin == POWER_BUTTON) {
+        THERMOSTAT_ACTION.onoff = true;
     }
     transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
@@ -296,6 +298,8 @@ int main(void) {
         tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
         return 1;
     }
+
+    // Setpoint decrement button
     nrf_drv_gpiote_in_config_t dec_in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     dec_in_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(SP_DEC, &dec_in_config, button_handler);
@@ -305,6 +309,7 @@ int main(void) {
     }
     nrf_drv_gpiote_in_event_enable(SP_DEC, true);
 
+    // Setpoint increment button
     nrf_drv_gpiote_in_config_t inc_in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     inc_in_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(SP_INC, &inc_in_config, button_handler);
@@ -314,6 +319,7 @@ int main(void) {
     }
     nrf_drv_gpiote_in_event_enable(SP_INC, true);
 
+    // timer button
     nrf_drv_gpiote_in_config_t timer_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     timer_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(TIMER_BUTTON, &timer_config, button_handler);
@@ -322,6 +328,16 @@ int main(void) {
         return 1;
     }
     nrf_drv_gpiote_in_event_enable(TIMER_BUTTON, true);
+
+    // power button
+    nrf_drv_gpiote_in_config_t power_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    power_config.pull = NRF_GPIO_PIN_PULLUP;
+    err_code = nrf_drv_gpiote_in_init(POWER_BUTTON, &power_config, button_handler);
+    if (err_code == NRF_ERROR_NO_MEM) {
+        tlc59116_set_all(&THERMOSTAT.tempdisplay_cfg, 0x0a);
+        return 1;
+    }
+    nrf_drv_gpiote_in_event_enable(POWER_BUTTON, true);
 
     rtcc_time_t time;
 

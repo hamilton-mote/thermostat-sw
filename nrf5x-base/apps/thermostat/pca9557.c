@@ -9,8 +9,10 @@ void pca9557_init(pca9557_cfg_t* cfg, nrf_drv_twi_t* p_instance) {
     uint8_t command[] = {PCA9557_OUT_REG, 0x0};
     nrf_drv_twi_tx(m_instance, cfg->address, command, sizeof(command), false);
 
+    nrf_delay_us(15000);
     // configure all pins as output
     command[0] = PCA9557_CFG_REG;
+    //command[1] = 0x0;
     nrf_drv_twi_tx(m_instance, cfg->address, command, sizeof(command), false);
 }
 
