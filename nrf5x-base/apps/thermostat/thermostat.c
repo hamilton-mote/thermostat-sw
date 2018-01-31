@@ -8,22 +8,22 @@ static const uint32_t ON_OFF_THRESHOLD = 300; // 5 minutes
 static const uint32_t FREE_COOLING_TIME = 300;
 
 int temperature_led_mapping[16][2] = {
-    {58, TLC59116_PWM0},
-    {61, TLC59116_PWM1},
-    {63, TLC59116_PWM2},
-    {65, TLC59116_PWM3},
-    {67, TLC59116_PWM4},
-    {69, TLC59116_PWM5},
-    {71, TLC59116_PWM6},
-    {73, TLC59116_PWM7},
-    {75, TLC59116_PWM8},
-    {77, TLC59116_PWM9},
-    {79, TLC59116_PWM10},
-    {81, TLC59116_PWM11},
-    {83, TLC59116_PWM12},
-    {85, TLC59116_PWM13},
-    {88, TLC59116_PWM14},
-    {92, TLC59116_PWM15},
+    {580, TLC59116_PWM0},
+    {610, TLC59116_PWM1},
+    {630, TLC59116_PWM2},
+    {650, TLC59116_PWM3},
+    {670, TLC59116_PWM4},
+    {690, TLC59116_PWM5},
+    {710, TLC59116_PWM6},
+    {730, TLC59116_PWM7},
+    {750, TLC59116_PWM8},
+    {770, TLC59116_PWM9},
+    {790, TLC59116_PWM10},
+    {810, TLC59116_PWM11},
+    {830, TLC59116_PWM12},
+    {850, TLC59116_PWM13},
+    {880, TLC59116_PWM14},
+    {920, TLC59116_PWM15},
 };
 
 int timer_led_mapping[4][2] = {
@@ -62,12 +62,13 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     // initialize tmemp/humidity sensor
     hdc1000_init(&tstat->sensor_cfg, tstat->twi_instance);
 
-    state->hysteresis = 1.0;
+    state->hysteresis = 10;
     state->on = false;
     state->is_heating = false;
     state->is_cooling = false;
-    state->temp_csp = 78;
-    state->temp_hsp = 72;
+    state->temp_in = 740;
+    state->temp_csp = 750;
+    state->temp_hsp = 720;
     state->heat_on_time = 0;
     state->heat_off_time = 0;
     state->cool_on_time = 0;
@@ -175,47 +176,47 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
 
     // handle heating w/ hysteresis
     if (state->temp_in <= (state->temp_hsp - state->hysteresis) && can_heat_on && can_cool_off) {
-        PRINT("heat1\n");
+        PRINT("\033[1;31mheat1\033[0m\n");
         state->is_heating = true;
         state->is_cooling = false;
     } else if (state->is_heating && (state->temp_in <= (state->temp_hsp + state->hysteresis)) && can_heat_on && can_cool_off) {
-        PRINT("heat2\n");
+        PRINT("\033[1;31mheat2\033[0m\n");
         state->is_heating = true;
         state->is_cooling = false;
     } else if (state->temp_in >= (state->temp_csp + state->hysteresis) && can_heat_off && can_cool_on) {
-        PRINT("cool1\n");
+        PRINT("\033[1;34mcool1\033[0m\n");
         state->is_heating = false;
         state->is_cooling = true;
         state->is_fan_on = true;
     } else if (state->is_cooling && (state->temp_in >= (state->temp_csp - state->hysteresis)) && can_heat_off && can_cool_on) {
-        PRINT("cool2\n");
+        PRINT("\033[1;34mcool2\033[0m\n");
         state->is_heating = false;
         state->is_cooling = true;
         state->is_fan_on = true;
     } else if (state->heat_on_time > 0 && state->heat_on_time < ON_OFF_THRESHOLD) {
-        PRINT("heat3\n");
+        PRINT("\033[1;31mheat3\033[0m\n");
         state->is_heating = true;
     } else if (state->heat_off_time > 0 && state->heat_off_time < ON_OFF_THRESHOLD) {
-        PRINT("heatoff1\n");
+        PRINT("\033[1;37mheatoff1\033[0m\n");
         state->is_heating = false;
     } else if (state->cool_on_time > 0 && state->cool_on_time < ON_OFF_THRESHOLD) {
-        PRINT("cool3\n");
+        PRINT("\033[1;34mcool3\033[0m\n");
         state->is_cooling = true;
     } else if (state->cool_off_time > 0 && state->cool_off_time < ON_OFF_THRESHOLD) {
-        PRINT("cooloff1\n");
+        PRINT("\033[1;37mcooloff1\033[0m\n");
         state->is_cooling = false;
     } else {
-        PRINT("alloff1\n");
+        PRINT("\033[1;37malloff1\033[0m\n");
         state->is_heating = false;
         state->is_cooling = false;
     }
 
     // handle free cooling
     if (!state->is_cooling && state->cool_on_time > 0 && state->fan_on_time == 0) { // cooling has just turned off
-        PRINT("freecoolon1\n");
+        PRINT("\033[1;34mfreecoolon\033[0m\n");
         state->is_fan_on = true;
     } else if (!state->is_cooling && state->fan_on_time > FREE_COOLING_TIME) {
-        PRINT("freecooloff1\n");
+        PRINT("\033[1;34mfreecooloff\033[0m\n");
         state->is_fan_on = false;
     }
 
@@ -241,6 +242,7 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     // handle if thermostat is off
     output->tstat_on = state->on;
     if (!state->on) {
+        PRINT("                    turn off\n");
         output->heat_stage_1 = false;
         output->heat_stage_2 = false;
         output->cool_stage_1 = false;
@@ -291,16 +293,16 @@ uint32_t min(uint32_t a, uint32_t b) {
     return b;
 }
 
-void nearest_temperature(uint8_t *temp, uint8_t *display_temp, int *led_register) {
+void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register) {
     int i=1;
-    if (*temp <= 58) {
+    if (*temp <= 580) {
         *display_temp = temperature_led_mapping[0][0];
         *led_register = temperature_led_mapping[0][1];
-        *temp = 58;
-    } else if (*temp >= 92) {
+        *temp = 580;
+    } else if (*temp >= 920) {
         *display_temp = temperature_led_mapping[15][0];
         *led_register = temperature_led_mapping[15][1];
-        *temp = 92;
+        *temp = 920;
     }
 
     for (;i<16;i++) {
@@ -395,7 +397,7 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
         // draw setpoints
 
         int led_register_temp;
-        uint8_t _t;
+        uint16_t _t;
         nearest_temperature(&output->csp_display, &_t, &led_register_temp);
         tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
 

@@ -69,9 +69,9 @@ typedef struct thermostat_state_t {
     uint32_t    fan_on_time;
     uint32_t    fan_off_time;
 
-    uint8_t     temp_in;    // measured inside temperature
-    uint8_t     temp_csp;   // cooling setpoint
-    uint8_t     temp_hsp;   // heating setpoint
+    uint16_t    temp_in;    // measured inside temperature
+    uint16_t    temp_csp;   // cooling setpoint
+    uint16_t    temp_hsp;   // heating setpoint
     uint8_t     hysteresis; // hysteresis value
     uint16_t    hold_timer; // current timer value
     bool        is_heating; // true if heating
@@ -82,10 +82,10 @@ typedef struct thermostat_state_t {
 
 typedef struct thermostat_action_t {
     uint32_t    *timer_direct;   // direct timer setting (in seconds)
-    uint8_t     *csp_direct;     // direct setting of cooling setpoint
-    uint8_t     *hsp_direct;     // direct setting of heating setpoint
+    uint16_t    *csp_direct;     // direct setting of cooling setpoint
+    uint16_t    *hsp_direct;     // direct setting of heating setpoint
     uint8_t     *hysteresis;     // changing hysteresis value
-    uint8_t     temp;           // temperature sensor reading
+    uint16_t    temp;           // temperature sensor reading
     bool        hold_timer;     // hold timer button press
     bool        onoff;          // power button press
     bool        inc_sp;         // increment setpoint button press
@@ -100,21 +100,21 @@ typedef struct thermostat_output_t {
     bool        fan_on;         // true if enable fan
     bool        tstat_on;       // true if tstat is on
     uint8_t     timer_led_num;  // number of timer LEDs to display
-    uint8_t     temp_display;   // which temperature to display?
-    uint8_t     hsp_display;    // display hsp
-    uint8_t     csp_display;    // display csp
+    uint16_t    temp_display;   // which temperature to display?
+    uint16_t    hsp_display;    // display hsp
+    uint16_t    csp_display;    // display csp
 } thermostat_output_t;
 
 typedef struct _thermostat_report_t {
-    uint8_t     temp_in;
-    uint8_t     temp_hsp;
-    uint8_t     temp_csp;
+    uint16_t    temp_in;
+    uint16_t    temp_hsp;
+    uint16_t    temp_csp;
     uint8_t     state;
     uint16_t    hold_timer;
 } _thermostat_report_t;
 
 typedef union thermostat_report_t {
-    uint8_t bytes[8];
+    uint8_t bytes[9];
     _thermostat_report_t report;
 } thermostat_report_t;
 
@@ -126,7 +126,7 @@ void enact_output(thermostat_t*, thermostat_output_t*);
 uint32_t max(uint32_t, uint32_t);
 uint32_t min(uint32_t, uint32_t);
 
-void nearest_temperature(uint8_t *temp, uint8_t *display_temp, int *led_register);
+void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register);
 void update_timer_press(thermostat_state_t*);
 void timer_led_settings(thermostat_state_t*, int *led0, int *led1, int *led2, int *led3, int *num);
 

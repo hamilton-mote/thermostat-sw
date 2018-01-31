@@ -114,9 +114,13 @@ static void timer_handler (void* p_context) {
     int16_t hum;
     int16_t temp;
     hdc1000_read(&THERMOSTAT.sensor_cfg, &temp, &hum);
-    temp = (1.8*temp+3200) / 100;
+    if (temp < 0) {
+        return;
+    }
+    temp = (1.8*temp+3200) / 10;
+    //PRINT("\033[0;35mtemp: %d\033[0m\n", temp);
 
-    uint8_t display_temp;
+    uint16_t display_temp;
     int led_register_temp;
 
     // turn off old LED
@@ -346,6 +350,7 @@ int main(void) {
     enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 
 
+    PRINT("Temp: %u, CSP: %d HSP: %d\n", THERMOSTAT_STATE.temp_in, THERMOSTAT_STATE.temp_csp, THERMOSTAT_STATE.temp_hsp);
     // Advertise because why not
     // Enter main loop.
     while (1) {
@@ -356,7 +361,7 @@ int main(void) {
 
         mcp7940n_readdate(&(THERMOSTAT.rtcc_cfg), &time);
         PRINT("Date: %u-%u-%u %u:%u:%u\n", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
-        PRINT("Temp: %u, CSP: %d HSP: %d\n", THERMOSTAT_STATE.temp_in, THERMOSTAT_STATE.temp_csp, THERMOSTAT_STATE.temp_hsp);
+        PRINT("Temp: %d, CSP: %d HSP: %d\n", THERMOSTAT_STATE.temp_in, THERMOSTAT_STATE.temp_csp, THERMOSTAT_STATE.temp_hsp);
 
     }
     return 0;
