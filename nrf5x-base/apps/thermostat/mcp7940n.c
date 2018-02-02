@@ -30,7 +30,7 @@ void mcp7940n_init(mcp7940n_cfg_t* cfg, nrf_drv_twi_t* p_instance) {
     configure[2] = toBCD(RTC_MIN);
     // configure 24-hour clock (clear the 0x40 bit)
     configure[3] = (toBCD(RTC_HOUR)) & (0xbf);
-    configure[4] = 0; // day of week TODO
+    configure[4] = toBCD(RTC_WDAY);
     configure[5] = toBCD(RTC_DAY);
     configure[6] = toBCD(RTC_MONTH);
     configure[7] = toBCD(RTC_YEAR);
@@ -62,7 +62,7 @@ void mcp7940n_readdate(mcp7940n_cfg_t* cfg, rtcc_time_t *output_time) {
     output_time->tm_sec = 10*((time[0] & 0x70) >> 4) + (time[0] & 0x0f);
     output_time->tm_min = 10*((time[1] & 0x70) >> 4) + (time[1] & 0x0f);
     output_time->tm_hour = 10*((time[2] & 0x30) >> 4) + (time[2] & 0x0f);
-
+    output_time->tm_wday = time[3] & 0x07;
     output_time->tm_mday = 10*((time[4] & 0x30) >> 4) + (time[4] & 0x0f);
     output_time->tm_mon = 10*((time[5] & 0x10) >> 4) + (time[5] & 0x0f);
     output_time->tm_year = 10*((time[6] & 0xf0) >> 4) + (time[6] & 0x0f);

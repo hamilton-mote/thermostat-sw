@@ -39,10 +39,11 @@ CFLAGS += -DAPP_RAM_BASE=0x20002078
 RTC_YEAR=`date +'%y' | sed 's/^0//'`
 RTC_MONTH=`date +'%m' | sed 's/^0//'`
 RTC_DAY=`date +'%d' | sed 's/^0//'`
+RTC_WDAY=`date +'%w' | sed 's/^0//'`
 RTC_HOUR=`date +'%H' | sed 's/^0//'`
 RTC_MIN=`date +'%M' | sed 's/^0//'`
 RTC_SEC=`date +'%S' | sed 's/^0//'`
-$(shell date +'%y %m %d %H:%M:%S' > FLASHED)
+$(shell date +'%y %m %d %H:%M:%S %w' > FLASHED)
 
 
 NRF_MODEL = nrf51
@@ -54,6 +55,6 @@ LIBRARY_PATHS += . ../../platform ../../include
 SOURCE_PATHS += ../../platform ../../src
 
 CFLAGS += -DRTC_YEAR=$(RTC_YEAR) -DRTC_MONTH=$(RTC_MONTH) -DRTC_DAY=$(RTC_DAY) 
-CFLAGS += -DRTC_HOUR=$(RTC_HOUR) -DRTC_MIN=$(RTC_MIN) -DRTC_SEC=$(RTC_SEC)
+CFLAGS += -DRTC_HOUR=$(RTC_HOUR) -DRTC_MIN=$(RTC_MIN) -DRTC_SEC=$(RTC_SEC) -DRTC_WDAY=$(RTC_WDAY)
 
 include $(NRF_BASE_PATH)/make/Makefile

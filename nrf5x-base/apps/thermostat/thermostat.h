@@ -2,6 +2,7 @@
 #define THERMOSTAT_H
 
 #include "tlc59116.h"
+#include "schedule.h"
 #include "mcp7940n.h"
 #include "pca9557.h"
 #include "hdc1000.h"
@@ -46,8 +47,9 @@
 #define MAX_HYST 20
 #define MIN_HYST 0
 
-// maximum timer interval (1 hour)
+// maximum timer amount (1 hour)
 #define MAX_TIMER_HOLD 3600
+// maximum timer interval (15 min)
 #define TIMER_INTERVAL 900
 
 typedef struct thermostat_t {
@@ -58,6 +60,7 @@ typedef struct thermostat_t {
     tlc59116_cfg_t  leddriver_cfg;
     pca9557_cfg_t   relay_cfg;
     mcp7940n_cfg_t  rtcc_cfg;
+    schedule_cfg_t  schedule;
 } thermostat_t;
 
 typedef struct thermostat_state_t {

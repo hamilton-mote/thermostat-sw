@@ -290,6 +290,28 @@ int main(void) {
 
     THERMOSTAT.rtcc_cfg.address = MCP7940N_ADDR;
 
+    modality_t day = {.label="DAYTIME", .hsp=70, .csp=74, .occupied=true};
+    modality_t night = {.label="NIGHT", .hsp=50, .csp=84, .occupied=false};
+    // storage of all defined modalities
+    THERMOSTAT.schedule.modalities[0] = day;
+    THERMOSTAT.schedule.modalities[1] = night;
+
+    PRINT("WDAY %d\n", RTC_WDAY);
+    daysched_t weekday;
+    for (int i=0;i<8;i++) weekday.modalities[i] = 1; // night
+    for (int i=8;i<18;i++) weekday.modalities[i] = 0; // day
+    for (int i=18;i<24;i++) weekday.modalities[i] = 1;
+    daysched_t weekend;
+    for (int i=0;i<24;i++) weekend.modalities[i] = 1;
+
+    THERMOSTAT.schedule.days[0] = weekend;
+    THERMOSTAT.schedule.days[1] = weekday;
+    THERMOSTAT.schedule.days[2] = weekday;
+    THERMOSTAT.schedule.days[3] = weekday;
+    THERMOSTAT.schedule.days[4] = weekday;
+    THERMOSTAT.schedule.days[5] = weekday;
+    THERMOSTAT.schedule.days[6] = weekend;
+
     /*
      * Initialize thermsotat state
      */
