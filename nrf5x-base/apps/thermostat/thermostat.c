@@ -109,11 +109,11 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
 
     // handle inc/dec setpoint through buttons
     if (action->inc_sp) {
-        state->temp_hsp = min(state->temp_hsp+2, MAX_HSP);
-        state->temp_csp = min(state->temp_csp+2, MAX_CSP);
+        state->temp_hsp = min(state->temp_hsp+20, MAX_HSP);
+        state->temp_csp = min(state->temp_csp+20, MAX_CSP);
     } else if (action->dec_sp) {
-        state->temp_hsp = max(state->temp_hsp-2, MIN_HSP);
-        state->temp_csp = max(state->temp_csp-2, MIN_CSP);
+        state->temp_hsp = max(state->temp_hsp-20, MIN_HSP);
+        state->temp_csp = max(state->temp_csp-20, MIN_CSP);
     }
 
     // handle setting hsp/csp directly next
