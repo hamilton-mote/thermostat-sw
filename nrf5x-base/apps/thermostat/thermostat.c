@@ -107,15 +107,21 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->hysteresis = max(min(*(action->hysteresis), MAX_HYST), MIN_HYST);
     }
 
-    // update setpoints according to schedule.
-    // transition_time->tm_wday gives us an index into tstat->schedule.days (idx)
-    daysched_t day = tstat->schedule.days[transition_time.tm_wday];
-    // index into day.modalities using the current hour to get the index into tstat->schedule.modalities
-    modality_t modality = tstat->schedule.modalities[day.modalities[transition_time.tm_hour]];
-    // add setpoints, making sure to multiply by 10
-    state->temp_hsp = modality.hsp * 10;
-    state->temp_csp = modality.csp * 10;
-    PRINT("Enacting schedule: wday: %d, hour: %d, [%d, %d]\n", transition_time.tm_wday, transition_time.tm_hour, state->temp_hsp, state->temp_csp);
+    // enact schedule if thermostat is *on* and timer is 0
+    if (state->hold_timer == 0 && state->on) {
+        // update setpoints according to schedule.
+        // transition_time->tm_wday gives us an index into tstat->schedule.days (idx)
+        daysched_t day = tstat->schedule.days[transition_time.tm_wday];
+        // index into day.modalities using the current hour to get the index into tstat->schedule.modalities
+        modality_t modality = tstat->schedule.modalities[day.modalities[transition_time.tm_hour]];
+        // add setpoints, making sure to multiply by 10
+        //state->temp_hsp = modality.hsp * 10;
+        //state->temp_csp = modality.csp * 10;
+        PRINT("Enacting schedule: wday: %d, hour: %d, [%d, %d]\n", transition_time.tm_wday, transition_time.tm_hour, state->temp_hsp, state->temp_csp);
+    } else {
+        PRINT("No schedule because timer is set\n");
+    }
+
 
     // handle inc/dec setpoint through buttons
     if (action->inc_sp) {
@@ -135,8 +141,14 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     }
 
     PRINT("timer val: %d, elapsed %u\n", state->hold_timer, elapsed);
+
     if (state->hold_timer > 0) {
-        state->hold_timer -= elapsed;
+        if (state->hold_timer <= elapsed) state->hold_timer = 0;
+        else state->hold_timer -= elapsed;
+
+        if (state->hold_timer == 0) {
+            state->on = false;
+        }
     }
 
     // increase timer if button was pressed
@@ -415,5 +427,11 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
         tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
 
         // draw temperature
+    } else {
+        // turn off timer  light
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], 0x0);
+        tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], 0x0);
     }
 }

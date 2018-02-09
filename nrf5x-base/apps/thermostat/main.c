@@ -37,7 +37,7 @@
 #define BLINK_TIMER_OP_QUEUE_SIZE          4  // Size of timer operation queues.
 
 // How long before the timer fires.
-#define BLINK_RATE     APP_TIMER_TICKS(2000, BLINK_TIMER_PRESCALER) // Blink every 5 seconds
+#define BLINK_RATE     APP_TIMER_TICKS(5000, BLINK_TIMER_PRESCALER) // Blink every 5 seconds
 
 // configure TWI
 nrf_drv_twi_t twi_instance = NRF_DRV_TWI_INSTANCE(0);
@@ -290,13 +290,13 @@ int main(void) {
 
     THERMOSTAT.rtcc_cfg.address = MCP7940N_ADDR;
 
+    /* Built-in schedule definition */
     modality_t day = {.label="DAYTIME", .hsp=70, .csp=74, .occupied=true};
     modality_t night = {.label="NIGHT", .hsp=50, .csp=84, .occupied=false};
     // storage of all defined modalities
     THERMOSTAT.schedule.modalities[0] = day;
     THERMOSTAT.schedule.modalities[1] = night;
 
-    PRINT("WDAY %d\n", RTC_WDAY);
     daysched_t weekday;
     for (int i=0;i<8;i++) weekday.modalities[i] = 1; // night
     for (int i=8;i<18;i++) weekday.modalities[i] = 0; // day
