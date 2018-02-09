@@ -118,10 +118,19 @@
         }
 
         function handleUpdate(event) {
-            let temp = event.target.value.getUint8(0);
-            let hsp = event.target.value.getUint8(1);
-            let csp = event.target.value.getUint8(2);
-            let state = event.target.value.getUint8(3);
+            console.log(event.target.value);
+            let temp1 = event.target.value.getUint8(0);
+            let temp2 = event.target.value.getUint8(1);
+            let temp = (temp1 + (temp2 << 8)) / 10;
+            let hsp1 = event.target.value.getUint8(2);
+            let hsp2 = event.target.value.getUint8(3);
+            let hsp = (hsp1 + (hsp2 << 8)) / 10;
+
+            let csp1 = event.target.value.getUint8(4);
+            let csp2 = event.target.value.getUint8(5);
+            let csp = (csp1 + (csp2 << 8)) / 10;
+
+            let state = event.target.value.getUint8(6);
             document.getElementById("temp").innerHTML = temp + ' F';
             document.getElementById("hsp").innerHTML = hsp + ' F';
             document.getElementById("csp").innerHTML = csp + ' F';

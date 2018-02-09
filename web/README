@@ -1,0 +1,6 @@
+
+`chrome://flags/#enable-experimental-web-platform-features`
+
+Turn this on and reboot chrome
+
+Also make sure you are running bluez with experimental features turned on (`-E` flag on bluetoothd)
