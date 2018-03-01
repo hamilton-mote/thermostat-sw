@@ -52,6 +52,8 @@
 // maximum timer interval (15 min)
 #define TIMER_INTERVAL 900
 
+typedef enum TSTAT_MODE { AUTO, HEAT, COOL, OFF } MODE;
+
 typedef struct thermostat_t {
     nrf_drv_twi_t   *twi_instance;
     hdc1000_cfg_t   sensor_cfg;
@@ -76,6 +78,7 @@ typedef struct thermostat_state_t {
     uint16_t    temp_csp;   // cooling setpoint
     uint16_t    temp_hsp;   // heating setpoint
     uint8_t     hysteresis; // hysteresis value
+    MODE        mode;       // current mode
     uint16_t    hold_timer; // current timer value
     bool        is_heating; // true if heating
     bool        is_cooling; // true if cooling
@@ -88,6 +91,7 @@ typedef struct thermostat_action_t {
     uint16_t    *csp_direct;     // direct setting of cooling setpoint
     uint16_t    *hsp_direct;     // direct setting of heating setpoint
     uint8_t     *hysteresis;     // changing hysteresis value
+    MODE        *mode;          // changing thermostat mode
     uint16_t    temp;           // temperature sensor reading
     bool        hold_timer;     // hold timer button press
     bool        onoff;          // power button press
@@ -124,7 +128,7 @@ typedef union thermostat_report_t {
 void init_thermostat(thermostat_t*, thermostat_state_t*, thermostat_action_t*, thermostat_output_t*);
 void transition(thermostat_t*, thermostat_state_t*, thermostat_action_t*);
 void state_to_output(thermostat_t*, thermostat_state_t*, thermostat_output_t*);
-void enact_output(thermostat_t*, thermostat_output_t*);
+void enact_output(thermostat_t*, thermostat_state_t*, thermostat_output_t*);
 
 uint32_t max(uint32_t, uint32_t);
 uint32_t min(uint32_t, uint32_t);

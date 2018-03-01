@@ -63,6 +63,7 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     hdc1000_init(&tstat->sensor_cfg, tstat->twi_instance);
 
     state->hysteresis = 10;
+    state->mode = AUTO;
     state->on = false;
     state->is_heating = false;
     state->is_cooling = false;
@@ -98,6 +99,10 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         state->on = !state->on; // toggle power
     }
 
+    // copy the mode from any setting
+    if (action->mode) {
+        state->mode = state->mode;
+    }
 
     // copy over new temperature value
     state->temp_in = action->temp;
@@ -165,34 +170,40 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
     // increase times
     if (state->is_heating) {
         state->heat_on_time += elapsed;
+        //state->heat_off_time = 0;
     } else {
         state->heat_off_time += elapsed;
+        //state->heat_on_time = 0;
     }
 
     if (state->is_cooling) {
         state->cool_on_time += elapsed;
+        //state->cool_off_time = 0;
     } else {
         state->cool_off_time += elapsed;
+        //state->cool_on_time = 0;
     }
 
     if (state->is_fan_on) {
         state->fan_on_time += elapsed;
+        //state->fan_off_time = 0;
     } else {
         state->fan_off_time += elapsed;
+        //state->fan_on_time = 0;
     }
 
 
     // check if inactive/active times are safe for turning on heat/cool
-    bool can_heat_on = (state->heat_on_time > 0) || 
-                       ((state->heat_on_time == 0) && (state->heat_off_time > ON_OFF_THRESHOLD));
+    bool can_heat_on = (state->mode == AUTO || state->mode == HEAT) && ((state->heat_on_time > 0) || 
+                       ((state->heat_on_time == 0) && (state->heat_off_time > ON_OFF_THRESHOLD)));
     bool can_heat_off = (state->heat_on_time == 0);
-    bool can_cool_on = (state->cool_on_time > 0) || 
-                       ((state->cool_on_time == 0) && (state->cool_off_time > ON_OFF_THRESHOLD));
+    bool can_cool_on = (state->mode == AUTO || state->mode == COOL) && ((state->cool_on_time > 0) || 
+                       ((state->cool_on_time == 0) && (state->cool_off_time > ON_OFF_THRESHOLD)));
     bool can_cool_off = (state->cool_on_time == 0);
-    can_heat_on = true;
-    can_heat_off = true;
-    can_cool_on = true;
-    can_cool_off = true;
+    //can_heat_on = true;
+    //can_heat_off = true;
+    //can_cool_on = true;
+    //can_cool_off = true;
 
     PRINT("TIMERS=> HEAT? on: %d off: %d | COOL? on: %d off: %d \n", can_heat_on, can_heat_off, can_cool_on, can_cool_off);
 
@@ -281,12 +292,15 @@ void state_to_output(thermostat_t *tstat, thermostat_state_t *state, thermostat_
     if (state->is_heating) {
         output->heat_stage_1 = true;
         output->cool_stage_1 = false;
+        tlc59116_blink(&tstat->tempdisplay_cfg);
     } else if (state->is_cooling) {
         output->heat_stage_1 = false;
         output->cool_stage_1 = true;
+        tlc59116_blink(&tstat->tempdisplay_cfg);
     } else {
         output->heat_stage_1 = false;
         output->cool_stage_1 = false;
+        tlc59116_no_blink(&tstat->tempdisplay_cfg);
     }
 
     if (state->is_fan_on) {
@@ -370,7 +384,7 @@ void update_timer_press(thermostat_state_t* state) {
     }
 }
 
-void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
+void enact_output(thermostat_t *tstat, thermostat_state_t* state, thermostat_output_t *output) {
 
     // set relays
     if (output->heat_stage_1) {
@@ -417,21 +431,24 @@ void enact_output(thermostat_t *tstat, thermostat_output_t *output) {
         }
 
         // draw setpoints
-
         int led_register_temp;
         uint16_t _t;
-        nearest_temperature(&output->csp_display, &_t, &led_register_temp);
-        tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+        if (state->mode == AUTO || state->mode == COOL) {
+            nearest_temperature(&output->csp_display, &_t, &led_register_temp);
+            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+        }
 
-        nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
-        tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+        if (state->mode == AUTO || state->mode == HEAT) {
+            nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
+            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+        }
 
-        // draw temperature
     } else {
         // turn off timer  light
         tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[0][1], 0x0);
         tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[1][1], 0x0);
         tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[2][1], 0x0);
         tlc59116_set_led(&tstat->leddriver_cfg, timer_led_mapping[3][1], 0x0);
+        tlc59116_no_blink(&tstat->tempdisplay_cfg);
     }
 }

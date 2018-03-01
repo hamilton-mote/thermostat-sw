@@ -172,9 +172,6 @@ static void timer_handler (void* p_context) {
     simple_ble_notify_char(&tstat_status_char);
 #endif
 
-    //transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
-    //state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
-    //enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
 }
 //
 // Setup timer
@@ -232,7 +229,7 @@ void button_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
     }
     transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
-    enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
+    enact_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
 }
 
 
@@ -367,9 +364,10 @@ int main(void) {
 
     rtcc_time_t time;
 
+
     transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
     state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
-    enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
+    enact_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
 
 
     PRINT("Temp: %u, CSP: %d HSP: %d\n", THERMOSTAT_STATE.temp_in, THERMOSTAT_STATE.temp_csp, THERMOSTAT_STATE.temp_hsp);
@@ -379,7 +377,7 @@ int main(void) {
         sd_app_evt_wait();
         transition(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_ACTION);
         state_to_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
-        enact_output(&THERMOSTAT, &THERMOSTAT_OUTPUT);
+        enact_output(&THERMOSTAT, &THERMOSTAT_STATE, &THERMOSTAT_OUTPUT);
 
         mcp7940n_readdate(&(THERMOSTAT.rtcc_cfg), &time);
         PRINT("Date: %u-%u-%u %u:%u:%u\n", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
