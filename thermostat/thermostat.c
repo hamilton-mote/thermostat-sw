@@ -438,12 +438,12 @@ void enact_output(thermostat_t *tstat, thermostat_state_t* state, thermostat_out
         uint16_t _t;
         if (state->mode == AUTO || state->mode == COOL) {
             nearest_temperature(&output->csp_display, &_t, &led_register_temp);
-            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0x0f);
         }
 
         if (state->mode == AUTO || state->mode == HEAT) {
             nearest_temperature(&output->hsp_display, &_t, &led_register_temp);
-            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0xff);
+            tlc59116_set_led(&tstat->spdisplay_cfg, led_register_temp, 0x0f);
         }
 
     } else {

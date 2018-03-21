@@ -130,7 +130,7 @@ static void timer_handler (void* p_context) {
     // turn on new LED
     THERMOSTAT_ACTION.temp = (uint16_t)temp;
     nearest_temperature(&(THERMOSTAT_ACTION.temp), &display_temp, &led_register_temp);
-    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0x0f);
+    tlc59116_set_led(&THERMOSTAT.tempdisplay_cfg, led_register_temp, 0xff);
 
 #ifdef BLE
     internal_status[0] = THERMOSTAT_STATE.is_heating;
