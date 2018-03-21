@@ -70,11 +70,14 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     state->temp_in = 740;
     state->temp_csp = 750;
     state->temp_hsp = 720;
-    state->heat_on_time = 0;
+
+    // we set the 'on' times to 1-minute short of the threshold. The thermostat will not heat/cool/fan when
+    // it is first plugged in, but will be able to do so w/n 1 minute of booting
+    state->heat_on_time = ON_OFF_THRESHOLD - 60;
     state->heat_off_time = 0;
-    state->cool_on_time = 0;
+    state->cool_on_time = ON_OFF_THRESHOLD - 60;
     state->cool_off_time = 0;
-    state->fan_on_time = 0;
+    state->fan_on_time = ON_OFF_THRESHOLD - 60;
     state->fan_off_time = 0;
 
     mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
