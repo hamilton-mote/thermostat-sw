@@ -91,7 +91,7 @@ void services_init(void) {
             &tstat_report_service, &internal_status_char);
 
     simple_ble_add_characteristic(1, 0, 1, 0, // read, write, notify, vlen
-            8, (uint8_t*)&report.bytes,
+            10, (uint8_t*)&report.bytes,
             &tstat_report_service, &tstat_status_char);
 }
 
@@ -146,6 +146,7 @@ static void timer_handler (void* p_context) {
     report.report.temp_hsp = THERMOSTAT_STATE.temp_hsp;
     report.report.temp_csp = THERMOSTAT_STATE.temp_csp;
     report.report.hold_timer = THERMOSTAT_STATE.hold_timer;
+    report.report.mode = THERMOSTAT_STATE.mode;
     if (THERMOSTAT_STATE.is_heating) {
         report.report.state |= 0x08;
     } else {

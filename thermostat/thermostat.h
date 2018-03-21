@@ -117,11 +117,12 @@ typedef struct _thermostat_report_t {
     uint16_t    temp_hsp;
     uint16_t    temp_csp;
     uint8_t     state;
+    uint8_t     mode;
     uint16_t    hold_timer;
 } _thermostat_report_t;
 
 typedef union thermostat_report_t {
-    uint8_t bytes[9];
+    uint8_t bytes[10];
     _thermostat_report_t report;
 } thermostat_report_t;
 
