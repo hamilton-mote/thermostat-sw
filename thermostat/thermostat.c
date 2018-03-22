@@ -4,6 +4,7 @@
 // marker values for the timer
 static rtcc_time_t last_updated_time;
 static uint32_t last_updated;
+static modality_t last_actuated_modality;
 static const uint32_t ON_OFF_THRESHOLD = 300; // 5 minutes
 static const uint32_t FREE_COOLING_TIME = 300;
 
@@ -73,11 +74,11 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
 
     // we set the 'on' times to 1-minute short of the threshold. The thermostat will not heat/cool/fan when
     // it is first plugged in, but will be able to do so w/n 1 minute of booting
-    state->heat_on_time = ON_OFF_THRESHOLD - 60;
+    state->heat_on_time = 0;//ON_OFF_THRESHOLD - 60;
     state->heat_off_time = 0;
-    state->cool_on_time = ON_OFF_THRESHOLD - 60;
+    state->cool_on_time = 0;//ON_OFF_THRESHOLD - 60;
     state->cool_off_time = 0;
-    state->fan_on_time = ON_OFF_THRESHOLD - 60;
+    state->fan_on_time = 0;//ON_OFF_THRESHOLD - 60;
     state->fan_off_time = 0;
 
     mcp7940n_readdate(&tstat->rtcc_cfg, &last_updated_time);
@@ -122,10 +123,14 @@ void transition(thermostat_t *tstat, thermostat_state_t* state, thermostat_actio
         daysched_t day = tstat->schedule.days[transition_time.tm_wday];
         // index into day.modalities using the current hour to get the index into tstat->schedule.modalities
         modality_t modality = tstat->schedule.modalities[day.modalities[transition_time.tm_hour]];
-        // add setpoints, making sure to multiply by 10
-        //state->temp_hsp = modality.hsp * 10;
-        //state->temp_csp = modality.csp * 10;
-        PRINT("Enacting schedule: wday: %d, hour: %d, [%d, %d]\n", transition_time.tm_wday, transition_time.tm_hour, state->temp_hsp, state->temp_csp);
+        if (modality.hsp != last_actuated_modality.hsp && modality.csp != last_actuated_modality.csp) {
+            // add setpoints, making sure to multiply by 10
+            PRINT("Enacting schedule: wday: %d, hour: %d, [%d, %d]\n", transition_time.tm_wday, transition_time.tm_hour, state->temp_hsp, state->temp_csp);
+            state->temp_hsp = modality.hsp * 10;
+            state->temp_csp = modality.csp * 10;
+            last_actuated_modality = modality;
+        }
+        PRINT("Active schedule: wday: %d, hour: %d, [%d, %d]\n", transition_time.tm_wday, transition_time.tm_hour, state->temp_hsp, state->temp_csp);
     } else {
         PRINT("No schedule because timer is set\n");
     }
