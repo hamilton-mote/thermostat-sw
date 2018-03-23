@@ -3,7 +3,6 @@
 
 #include "nrf_drv_twi.h"
 #include <stdint.h>
-#include "nrf_drv_twi.h"
 #include <stdbool.h>
 #include <math.h>
 #include "nrf_delay.h"

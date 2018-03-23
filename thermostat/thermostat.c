@@ -339,14 +339,14 @@ uint32_t min(uint32_t a, uint32_t b) {
 
 void nearest_temperature(uint16_t *temp, uint16_t *display_temp, int *led_register) {
     int i=1;
-    if (*temp <= 580) {
+    if (*temp <= MIN_HSP) {
         *display_temp = temperature_led_mapping[0][0];
         *led_register = temperature_led_mapping[0][1];
-        *temp = 580;
-    } else if (*temp >= 920) {
+        *temp = MIN_HSP;
+    } else if (*temp >= MAX_CSP) {
         *display_temp = temperature_led_mapping[15][0];
         *led_register = temperature_led_mapping[15][1];
-        *temp = 920;
+        *temp = MAX_CSP;
     }
 
     for (;i<16;i++) {
@@ -396,13 +396,13 @@ void enact_output(thermostat_t *tstat, thermostat_state_t* state, thermostat_out
 
     // set relays
     if (output->heat_stage_1) {
-        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0xff);
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0x0f);
         tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0x0);
         cool_off(&tstat->relay_cfg);
         heat_on(&tstat->relay_cfg);
     } else if (output->cool_stage_1) {
         tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM6, 0x0);
-        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0xff);
+        tlc59116_set_led(&tstat->leddriver_cfg, TLC59116_PWM7, 0x0f);
         heat_off(&tstat->relay_cfg);
         cool_on(&tstat->relay_cfg);
     } else {

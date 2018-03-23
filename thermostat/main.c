@@ -280,7 +280,7 @@ int main(void) {
     THERMOSTAT.tempdisplay_cfg.initial_value = 0x0;
 
     THERMOSTAT.spdisplay_cfg.address = LED_DRIVER_SP;
-    THERMOSTAT.spdisplay_cfg.initial_value = 0x0;
+    THERMOSTAT.spdisplay_cfg.initial_value = 0x00;
 
     THERMOSTAT.leddriver_cfg.address = LED_DRIVER_3;
     THERMOSTAT.leddriver_cfg.initial_value = 0x0;
