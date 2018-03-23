@@ -36,12 +36,12 @@
 
 /** Thermostat Constraints **/
 // max/min heating set point
-#define MAX_HSP 900
-#define MIN_HSP 440
+#define MAX_HSP 840
+#define MIN_HSP 400
 
 // max/min cooling set point
-#define MAX_CSP 860
-#define MIN_CSP 400
+#define MAX_CSP 920
+#define MIN_CSP 480
 
 // max/min hysteresis amounts
 #define MAX_HYST 20

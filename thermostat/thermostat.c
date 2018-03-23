@@ -9,29 +9,29 @@ static const uint32_t ON_OFF_THRESHOLD = 300; // 5 minutes
 static const uint32_t FREE_COOLING_TIME = 300;
 
 int temperature_led_mapping[16][2] = {
-    {580, TLC59116_PWM0},
-    {610, TLC59116_PWM1},
-    {630, TLC59116_PWM2},
-    {650, TLC59116_PWM3},
-    {670, TLC59116_PWM4},
-    {690, TLC59116_PWM5},
-    {710, TLC59116_PWM6},
-    {730, TLC59116_PWM7},
-    {750, TLC59116_PWM8},
-    {770, TLC59116_PWM9},
-    {790, TLC59116_PWM10},
-    {810, TLC59116_PWM11},
-    {830, TLC59116_PWM12},
-    {850, TLC59116_PWM13},
-    {880, TLC59116_PWM14},
-    {920, TLC59116_PWM15},
+    {540, TLC59116_PWM0},
+    {580, TLC59116_PWM1},
+    {600, TLC59116_PWM2},
+    {620, TLC59116_PWM3},
+    {640, TLC59116_PWM4},
+    {660, TLC59116_PWM5},
+    {680, TLC59116_PWM6},
+    {700, TLC59116_PWM7},
+    {720, TLC59116_PWM8},
+    {740, TLC59116_PWM9},
+    {760, TLC59116_PWM10},
+    {780, TLC59116_PWM11},
+    {800, TLC59116_PWM12},
+    {820, TLC59116_PWM13},
+    {840, TLC59116_PWM14},
+    {880, TLC59116_PWM15},
 };
 
 int timer_led_mapping[4][2] = {
-    {(1*TIMER_INTERVAL), TLC59116_PWM0},
-    {(2*TIMER_INTERVAL), TLC59116_PWM3},
-    {(3*TIMER_INTERVAL), TLC59116_PWM2},
-    {(4*TIMER_INTERVAL), TLC59116_PWM1},
+    {(1*TIMER_INTERVAL), TLC59116_PWM3},
+    {(2*TIMER_INTERVAL), TLC59116_PWM2},
+    {(3*TIMER_INTERVAL), TLC59116_PWM1},
+    {(4*TIMER_INTERVAL), TLC59116_PWM0},
 };
 
 void clean_action(thermostat_action_t *action) {
@@ -69,8 +69,8 @@ void init_thermostat(thermostat_t *tstat, thermostat_state_t* state, thermostat_
     state->is_heating = false;
     state->is_cooling = false;
     state->temp_in = 740;
-    state->temp_csp = 750;
-    state->temp_hsp = 720;
+    state->temp_csp = 780;
+    state->temp_hsp = 700;
 
     // we set the 'on' times to 1-minute short of the threshold. The thermostat will not heat/cool/fan when
     // it is first plugged in, but will be able to do so w/n 1 minute of booting
