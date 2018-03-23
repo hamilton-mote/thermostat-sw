@@ -290,8 +290,8 @@ int main(void) {
     THERMOSTAT.rtcc_cfg.address = MCP7940N_ADDR;
 
     /* Built-in schedule definition */
-    modality_t day = {.label="DAYTIME", .hsp=70, .csp=74, .occupied=true};
-    modality_t night = {.label="NIGHT", .hsp=50, .csp=84, .occupied=false};
+    modality_t day = {.label="DAYTIME", .hsp=70, .csp=78, .occupied=true};
+    modality_t night = {.label="NIGHT", .hsp=60, .csp=85, .occupied=false};
     // storage of all defined modalities
     THERMOSTAT.schedule.modalities[0] = day;
     THERMOSTAT.schedule.modalities[1] = night;
