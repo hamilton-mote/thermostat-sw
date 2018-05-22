@@ -1,10 +1,7 @@
-from xbos import get_client
 from bw2python.bwtypes import PayloadObject
 import msgpack
 import time
 from bluepy import btle
-
-c = get_client()
 
 class MyDelegate(btle.DefaultDelegate):
     def __init__(self):
@@ -41,8 +38,6 @@ class MyDelegate(btle.DefaultDelegate):
             'time': int(time.time()*1e9),
         }
         print msg
-        po = PayloadObject((2,1,1,0), None, msgpack.packb(msg))
-        c.publish('410testbed/thermocat/s.thermocat/thermocat/i.xbos.thermostat/signal/info', payload_objects=(po,))
 
 p = btle.Peripheral("C0:98:E5:80:80:80")
 p.setDelegate(MyDelegate())
